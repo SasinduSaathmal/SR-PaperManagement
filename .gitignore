@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.sites-runtime/
+.env
+.env.*
+!.env.example
+LEARNING_NOTES.md
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
