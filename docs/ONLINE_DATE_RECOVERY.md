@@ -27,4 +27,4 @@ An already-open tab can still refer to assets from an older deployment. Refresh 
 
 Fourteen feature tests pass, covering generated XLSX files in both Excel date systems, 1940/2040 month/year values, explicit confirmation, HTML tables, admin permissions, old pending-row repair, duplicate file submissions, missing-student review, and protection of existing marks. Production build succeeds and includes `_headers`; it produces no separate `onlineHTML` chunk. The current screenshots were used to identify the pattern; the user's actual `online.xlsx` file was not available for this change.
 
-The full test suite retains an unrelated prototype test failure: an old search fixture omits the school field. Browser interaction was not exercised in this environment.
+The legacy search fixture now includes a school, and search tolerates missing school fields without changing stored records. The full suite passes, including a regression covering missing schools and temporary-ID lookup. Browser interaction was not exercised in this environment.
