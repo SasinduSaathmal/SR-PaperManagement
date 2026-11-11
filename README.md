@@ -1,66 +1,46 @@
 # Physics - Samitha Rathnayake
 
-Trial-data cleanup: see [admin cleanup before real marking](docs/TRIAL_DATA_CLEANUP.md). Apply `supabase/009_trial_data_cleanup.sql` before deploying this update. Installing it deletes nothing.
+A shared React website for student records, paper marking, online marks imports and ranked PDF/Excel reports. Supabase handles email/password accounts and PostgreSQL permissions. Cloudflare Workers serves the website and the private account-invitation endpoint.
 
-Online import fixes: see [Excel date recovery and deployment loading](docs/ONLINE_DATE_RECOVERY.md). Apply `supabase/008_online_date_recovery.sql` before deploying this update.
+## Current features
 
-Marking fixes: see [zero-fill attribution, empty batches and Excel index files](docs/MARKING_BUG_FIXES.md). Apply `supabase/007_zero_fill_empty_batches.sql` before deploying these fixes.
+- Exam-year groups, archive/restore, shared schools, student entry/editing, deactivation and bulk Excel/CSV import.
+- Temporary-ID replacement with searchable aliases and admin-confirmed repeater links across years.
+- Shared marks entry, account-specific local drafts, submissions/resubmissions, test closure/reopening/cancellation, participant changes and batch reassignment with original attribution.
+- Online HTML-table .xls, XLSX and CSV imports, confirmed Excel date recovery, pending-row review and conflict protection.
+- Raw-total rankings separated into Maths/Bio, Top N with ties, immutable provisional/final report versions, PDF/Excel export and closed-test marker downloads.
+- Admin account invitation, display names, roles, disable/reactivate controls and reviewed trial-data cleanup by exam year.
 
-Online imports and immutable PDF/Excel report versions: see [setup and usage](docs/ONLINE_IMPORT_REPORTS.md). Apply `supabase/006_online_import_reports.sql` before deploying that update.
+All permissions are checked in the database/server. Passwords stay with Supabase Auth, and privileged API keys stay in the Worker. Public sign-up is not offered.
 
-Current shared-database feature update: see [student import, empty-test removal and marker Excel downloads](docs/IMPORT_REMOVE_EXPORT.md). Apply `supabase/005_import_remove_export.sql` before deploying this update. The Stage 1 notes below describe the earlier teaching prototype.
+## Update the existing installation
 
-Stage 1 of the student marks system: React with JavaScript and Vite.
+The latest update requires migrations 010–012 after the previously installed 001–009. Follow [identity, accounts and participant setup](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md) for the scripts, invitation runtime settings, email callback configuration and website controls. Installing these scripts does not clear data or send invitations.
 
-This is a learning build with fictional records. It is not ready for real student marks. Accounts in the profile selector are sample views, not authentication. Saving uses this browser's local storage; it does not share work between users or devices. Supabase authentication, PostgreSQL permissions and shared saving are the next stage.
+For a new project, configure Supabase email/password authentication, create the owner account, edit the owner email in 001, then apply migrations 001–012 in order. Keep public sign-up disabled. Do not rerun the old 001 template over a current deployment: later migrations harden its profile trigger.
 
-## Run on your computer
-
-Install a current supported Node.js LTS release, then open this folder in VS Code. In its terminal:
+## Development and deployment
 
 ```sh
 npm ci
 npm run dev
-```
-
-Open the local URL printed in the terminal. To check the rules and build the deployment files:
-
-```sh
 npm test
 npm run build
 ```
 
-Vite writes the website into `dist/`. For eventual Cloudflare Pages hosting the build command is `npm run build` and output directory is `dist`. `.openai/hosting.json` identifies the private development preview; it is not a Supabase or Cloudflare account credential.
+Configure the browser build with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The server invitation endpoint separately requires runtime `SUPABASE_URL` and a secret `SUPABASE_SECRET_KEY` in Cloudflare. Never prefix a secret key with `VITE_`.
 
-## Try this stage
+The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview commands. The Vite plugin generates the Worker configuration and binds the client asset directory automatically. Runtime dashboard variables are preserved on deployment. No server secret belongs in this repository.
 
-1. Open Test workspace. Use the 2027 group and Phase 3 / Paper 6.
-2. Search `006900`. It finds fictional student Amal Perera with official ID `SC/2027/6900`.
-3. Change the score to `112.25`, wait for saving, and refresh. The score should remain.
-4. Enter `151` for this test, which is out of 150. The draft survives but validation blocks saving/submission. Correct it or choose Discard draft.
-5. Press Finish & Submit. Change one of your scores. Your batch changes to Needs resubmission.
-6. Switch sample profile to Marker 3. Other people's scores are read-only. Switch back to Sasindu to try an admin correction.
-7. Use Add student, leave the ID blank, and create a fictional student. A temporary ID is assigned. Find them by name or full temporary ID; number-only search does not select temporary IDs.
-8. Switch between Individual and Table layouts. Both edit the same scores.
-9. Open Rankings to see raw totals, competition ranks, and Maths/Bio separation. The sample ranking is a live teaching calculation, not an exported report snapshot.
+## Feature guides
 
-Reset sample data removes this demo's records and drafts on this browser after confirmation. Clearing browser storage also removes them. Do not rely on browser storage as a production backup. The demo does not coordinate concurrent browser tabs; server revisions and conflict handling arrive with Supabase.
+- [Student import, empty-test removal and marker Excel downloads](docs/IMPORT_REMOVE_EXPORT.md)
+- [Online imports, rankings and saved report versions](docs/ONLINE_IMPORT_REPORTS.md)
+- [Zero-fill attribution and empty marker batches](docs/MARKING_BUG_FIXES.md)
+- [Excel date recovery and deployment loading](docs/ONLINE_DATE_RECOVERY.md)
+- [Admin cleanup of trial data](docs/TRIAL_DATA_CLEANUP.md)
+- [Identity, accounts and participant administration](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md)
 
-## Where the code lives
+Some older guides describe the test status at the time of their individual updates. The current full suite has 33 passing tests. Production client and Worker builds pass. Actual invitation-email delivery and the complete multi-account browser workflow require final checks on the configured deployment.
 
-| File                   | Responsibility                                          |
-| ---------------------- | ------------------------------------------------------- |
-| `src/main.jsx`         | Mounts React into the HTML root                         |
-| `src/App.jsx`          | Screens, components, events, draft state, and autosave  |
-| `src/domain.js`        | Pure JavaScript business rules                          |
-| `src/sampleData.js`    | Fictional sample records                                |
-| `src/storage.js`       | Browser storage with explicit error handling            |
-| `src/styles.css`       | Responsive interface and styling                        |
-| `tests/domain.test.js` | Meaningful rule tests using Node's built-in test runner |
-
-Start reading `LEARNING_NOTES.md`, then inspect the matching functions. Learning notes are also available from the sidebar in the app.
-
-## Not included yet
-
-Real email/password login, invitations, account disablement, database security policies, shared autosave, test administration, closing/archive workflows, repeater linking, bulk/online imports, conflict resolution, saved report snapshots, and PDF/Excel exports. The design document remains the specification for those stages. Prototype checks in browser JavaScript are useful for feedback but do not replace server-side permission enforcement.
-
+The earlier local-only teaching prototype remains in source history and sample-data helpers; the signed-in website uses the shared database.

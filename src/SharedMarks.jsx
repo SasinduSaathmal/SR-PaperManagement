@@ -3,6 +3,9 @@ import { supabase } from "./lib/supabaseClient.js";
 import SharedStudents from "./SharedStudents.jsx";
 import OnlineMarksImport from "./OnlineMarksImport.jsx";
 import SharedReports from "./SharedReports.jsx";
+import { searchMarksStudents } from "./studentsApi.js";
+import AccountAdministration from "./AccountAdministration.jsx";
+import ParticipantManagement from "./ParticipantManagement.jsx";
 import TrialDataCleanup from "./TrialDataCleanup.jsx";
 import { featureRequest } from "./featureApi.js";
 import { downloadMarker } from "./workbooks.js";
@@ -72,7 +75,7 @@ export default function SharedMarks({ profile }) {
     const warn = e => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn);
   }, [pending]);
-  const navigation = [{ id: "home", label: "Overview" }, { id: "marks", label: "Test workspace" }, { id: "students", label: "Students" }, { id: "rankings", label: "Rankings & reports" }];
+  const navigation = [{ id: "home", label: "Overview" }, { id: "marks", label: "Test workspace" }, { id: "students", label: "Students" }, { id: "rankings", label: "Rankings & reports" }, ...(admin ? [{ id: "accounts", label: "Accounts" }] : [])];
   return <div className="app-shell shared-marks-shell">
     <aside className="sidebar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage("home"); }}><MarkIcon/><span><strong>Physics</strong><small>Samitha Rathnayake</small></span></a>
       <div className="workspace-label">MARKS MANAGEMENT</div><nav aria-label="Main navigation">{navigation.map(n => <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} onClick={() => { setPage(n.id); if (n.id === "students") refreshIndex(); }}>{n.label}</button>)}</nav>
@@ -80,18 +83,18 @@ export default function SharedMarks({ profile }) {
     </aside>
     <div className="main-shell"><header className="topbar"><span className="breadcrumb">Workspace / {navigation.find(n => n.id === page)?.label}</span><div className="topbar-actions"><span className="badge">Shared database</span><span className="account-label">{profile.display_name} · {admin ? "Admin & marker" : "Marker"}</span></div></header>
       <main><div className="page-heading"><div><div className="eyebrow">{group?.exam_year || "SHARED"} EXAM GROUP</div><h1>{navigation.find(n => n.id === page)?.label}</h1><p>Student records, test marks and marker submissions shared across accounts.</p></div>
-        {page !== "students" && <label className="group-picker"><span>Exam-year group</span><select aria-label="Exam-year group" value={groupId} disabled={loading || showCreate} onChange={e => setGroupId(e.target.value)}>
+        {page !== "students" && page !== "accounts" && <label className="group-picker"><span>Exam-year group</span><select aria-label="Exam-year group" value={groupId} disabled={loading || showCreate} onChange={e => setGroupId(e.target.value)}>
           {!index.groups.length && <option value="">No groups available</option>}{index.groups.map(g => <option key={g.id} value={g.id}>{g.exam_year} students{g.is_archived ? " · Archived" : ""}</option>)}</select></label>}</div>
         {draftError && <p className="alert" role="alert">{draftError}</p>}
         {error && <p className="alert" role="alert">{error}</p>}
-        {page === "students" ? <SharedStudents profile={profile}/> : page === "rankings" ? (group ? <SharedReports key={group.id} group={group} tests={tests} profile={profile} pendingDrafts={pending}/> : <p>Choose an exam group.</p>) : <>
+        {page === "accounts" ? <AccountAdministration profile={profile} onChanged={refreshIndex}/> : page === "students" ? <SharedStudents profile={profile}/> : page === "rankings" ? (group ? <SharedReports key={group.id} group={group} tests={tests} profile={profile} pendingDrafts={pending}/> : <p>Choose an exam group.</p>) : <>
           <div className="shared-marks-toolbar"><button className="secondary-button" onClick={refreshIndex}>Refresh tests</button>{admin && <button className="primary-button" disabled={!group || group.is_archived || !!error} onClick={() => setShowCreate(true)}>Create test</button>}<span className="muted">{pending ? `${pending} local draft(s) waiting to sync` : "No pending local drafts"}</span></div>
           {group?.is_archived && <p className="readonly-note">Archived group: tests and scores are read-only.</p>}
           {showCreate && group && <CreateTest group={group} profiles={index.profiles} profile={profile} onClose={() => setShowCreate(false)} onCreated={id => { setShowCreate(false); setTestId(id); refreshIndex(); setPage("marks"); }}/>}
           {loading ? <p className="shared-empty">Loading shared tests…</p> : !tests.length ? <section className="panel shared-empty"><h2>No shared tests in this group yet</h2><p>{admin ? "Create a test and select its participating markers to start." : "An admin must create a test and select its markers."}</p><p>Earlier practice tests stay in this browser and are not imported into real records.</p></section> : <>
             {page === "home" && <div className="test-grid">{tests.map(t => <button className="test-card panel" key={t.id} onClick={() => { setTestId(t.id); setPage("marks"); }}><div className="test-card-top"><span className="badge">{t.status}</span></div><p>{t.phase}</p><h2>Paper {t.paper}</h2><span>{formatMark(t.max_cents)} maximum marks · {t.test_date}</span><div className="test-card-foot">Open workspace →</div></button>)}</div>}
             <div hidden={page === "home"}><label className="shared-test-select">Selected test<select aria-label="Selected test" value={testId} onChange={e => setTestId(e.target.value)}>{tests.map(t => <option key={t.id} value={t.id}>{t.phase} · Paper {t.paper} · {t.status}</option>)}</select></label></div>
-            {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/></div>}
+            {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} profiles={index.profiles} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/></div>}
           </>}
         </>}
         {page === "home" && admin && group && <TrialDataCleanup key={group.id} group={group} profileId={profile.id} tests={tests} onCleared={() => { setTestId(""); setShowCreate(false); refreshIndex(); }}/>}
@@ -119,12 +122,12 @@ function CreateTest({ group, profiles, profile, onClose, onCreated }) {
     <label>Test date<input required type="date" value={values.date} disabled={busy} onChange={e => set("date", e.target.value)}/></label>
     <label>Maximum marks<input required inputMode="decimal" value={values.max} disabled={busy} onChange={e => set("max", e.target.value)}/></label>
   </div><fieldset className="marker-choices" disabled={busy}><legend>Participating markers</legend>{profiles.filter(p => p.is_active).map(p => <label key={p.id}><input type="checkbox" checked={values.markers.includes(p.id)} onChange={e => set("markers", e.target.checked ? [...values.markers, p.id] : values.markers.filter(id => id !== p.id))}/>{p.display_name}{p.role === "admin" ? " · Admin" : ""}</label>)}</fieldset>
-    <p className="field-help">Participants are fixed for this stage. Everyone can view the test; selected markers enter paper scores. Admins can correct existing entries.</p>
+    <p className="field-help">Selected participants enter paper scores. Admins can manage participants and reassign batches in the test workspace.</p>
     {error && <p className="field-error" role="alert">{error}</p>}<div className="shared-form-actions"><button className="primary-button" disabled={busy || !values.markers.length}>{busy ? "Creating…" : "Save test"}</button><button type="button" className="text-button" disabled={busy} onClick={onClose}>Cancel</button></div>
   </form>;
 }
 
-function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, blocked, onChanged, onRemoved }) {
+function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, changeDraft, blocked, onChanged, onRemoved }) {
   const [snapshot, setSnapshot] = useState(null), snapshotRef = useRef(null);
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [mode, setMode] = useState("form");
@@ -193,7 +196,7 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
   const open = test.status === "Open" && !group.is_archived;
   const completion = completionOf(snapshot);
   const selected = students.find(s => s.id === selectedId);
-  const matches = students.filter(s => [s.name, s.student_code, s.school].some(value => value.toLowerCase().includes(query.trim().toLowerCase())));
+  const matches = searchMarksStudents(students,query,group.exam_year);
   const displayed = allScores.filter(s => scope === "all" || s.marker_id === profile.id).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   function edit(student, text) {
     const id = draftId(testId, student.id), previous = draftsRef.current[id];
@@ -291,8 +294,9 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
       {!!currentDrafts.length && <section className="draft-review"><h3>Drafts waiting to sync</h3>{currentDrafts.map(([id,d]) => <div key={id}><span>{d.name || d.enrolmentId}: {parseMark(d.text, test.max_cents / 100).error || draftErrors[id] || "Waiting to save"}</span><button className="text-button" disabled={saving || busy || !open} onClick={() => flush(true)}>Retry save</button>
         <button className="text-button" disabled={saving || busy} onClick={() => { if (!window.confirm("Discard this unsynced draft? The server-saved score will stay unchanged.")) return; try { changeDraft(id, null, d.requestId); } catch(e) { setError(e.message); } }}>Discard draft</button></div>)}<p>For a stale-score conflict, copy your intended mark, Refresh scores, discard the old draft and re-enter after reviewing the saved value. Retrying alone never overwrites a newer score.</p></section>}
       <section className="panel recent-panel"><div className="panel-title-row"><h3>Entries at a glance</h3><div className="segmented small"><button className={scope === "mine" ? "selected" : ""} onClick={() => setScope("mine")}>My entries</button><button className={scope === "all" ? "selected" : ""} onClick={() => setScope("all")}>All markers</button></div></div>
-        <div className="table-scroll"><table><thead><tr><th>Student</th><th>Score</th><th>Marker</th><th>Source</th><th>Action</th></tr></thead><tbody>{displayed.map(s => <tr key={s.enrolment_id}><td>{students.find(e => e.id === s.enrolment_id)?.name || s.enrolment_id}</td><td>{formatMark(s.cents)}</td><td>{s.marker_name || (s.source === "Online" ? "Online import" : "Admin zero fill")}</td><td>{s.source}</td><td><button className="text-button" onClick={() => { setSelectedId(s.enrolment_id); setMode("form"); }}>View / Edit</button>{open && (admin || s.marker_id === profile.id) && <button className="text-button" disabled={saving || busy || currentDrafts.length > 0} onClick={() => { if (window.confirm("Remove this test entry? Student details and score history will be retained.")) action("app_remove_test_score", { p_test_id: testId, p_enrolment_id: s.enrolment_id, p_expected_version: s.version }, "Score removed. Student and history preserved."); }}>Remove entry</button>}</td></tr>)}</tbody></table>{!displayed.length && <p className="shared-empty">No saved scores in this view.</p>}</div>
+        <div className="table-scroll"><table><thead><tr><th>Student</th><th>Score</th><th>Marker</th><th>Source</th><th>Action</th></tr></thead><tbody>{displayed.map(s => <tr key={s.enrolment_id}><td>{students.find(e => e.id === s.enrolment_id)?.name || s.enrolment_id}</td><td>{formatMark(s.cents)}</td><td>{s.marker_name || (s.source === "Online" ? "Online import" : "Admin zero fill")}{s.original_marker_id && s.original_marker_id!==s.marker_id && <small>Originally marked by {s.original_marker_name || s.original_marker_id}</small>}</td><td>{s.source}</td><td><button className="text-button" onClick={() => { setSelectedId(s.enrolment_id); setMode("form"); }}>View / Edit</button>{open && (admin || s.marker_id === profile.id) && <button className="text-button" disabled={saving || busy || currentDrafts.length > 0} onClick={() => { if (window.confirm("Remove this test entry? Student details and score history will be retained.")) action("app_remove_test_score", { p_test_id: testId, p_enrolment_id: s.enrolment_id, p_expected_version: s.version }, "Score removed. Student and history preserved."); }}>Remove entry</button>}</td></tr>)}</tbody></table>{!displayed.length && <p className="shared-empty">No saved scores in this view.</p>}</div>
       </section>
+      {admin && <ParticipantManagement snapshot={snapshot} profiles={profiles} blocked={blocked || saving || busy || currentDrafts.length>0} onSaved={async()=>{await refresh();onChanged();}}/>}
       {snapshot.pending_online > 0 && <p className="alert" role="status">{snapshot.pending_online} online import row(s) require admin review before this test can be completed.</p>}
       <section className="panel completion-panel"><h3>{admin ? "Complete this test" : "Marker submissions"}</h3><p>{completion.missing.length} active student(s) without a score. {participants.length - completion.unsubmitted.length} of {participants.length} marker batches submitted.</p>
         <ul className="shared-batch-list">{participants.map(p => {

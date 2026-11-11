@@ -60,7 +60,8 @@ function AccountGate({ children, onPassword, onReset, notice }) {
   useEffect(() => {
     const refresh = () => setRetry((value) => value + 1);
     window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
+    window.addEventListener("physics:profile-changed", refresh);
+    return () => {window.removeEventListener("focus", refresh);window.removeEventListener("physics:profile-changed", refresh);};
   }, []);
 
   async function handleLogin(event) {
@@ -160,3 +161,4 @@ function AccountGate({ children, onPassword, onReset, notice }) {
     </div>
   );
 }
+
