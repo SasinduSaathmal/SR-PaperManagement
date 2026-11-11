@@ -40,7 +40,8 @@ The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview 
 - [Excel date recovery and deployment loading](docs/ONLINE_DATE_RECOVERY.md)
 - [Admin cleanup of trial data](docs/TRIAL_DATA_CLEANUP.md)
 - [Identity, accounts and participant administration](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md)
+- [Database backup, restore checks and final release review](docs/BACKUP_AND_RECOVERY.md)
 
-Some older guides describe the test status at the time of their individual updates. The current full suite has 33 passing tests. Production client and Worker builds pass. Actual invitation-email delivery and the complete multi-account browser workflow require final checks on the configured deployment.
+Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite. The owner has verified invitation delivery and marker-side workflows on the configured deployment. Recovery tooling includes read-only database inventories, permission/trigger checks and a two-marker marking-to-report rehearsal in a disposable database. A hosted backup/restore rehearsal remains an operator step; no production cleanup or restore is run by the tests.
 
 The earlier local-only teaching prototype remains in source history and sample-data helpers; the signed-in website uses the shared database.
