@@ -1,3 +1,4 @@
+import BrandMark from "./BrandMark.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import { readAuthLanding, passwordError, passwordSetupKey, passwordRedirect, clearAuthLanding } from "./authRecovery.js";
 import { supabase } from "./lib/supabaseClient.js";
@@ -78,7 +79,7 @@ export default function PasswordAccess({ children }) {
       leave(); setNotice("Password saved. You can now sign in using your email and password.");
     } catch (failure) { setError(failure.message); } finally { setBusy(false); }
   }
-  const brand = <><div className="auth-theme-control"><ThemeToggle/></div><h1>Physics</h1><p>Samitha Rathnayake</p></>;
+  const brand = <><div className="auth-theme-control"><ThemeToggle/></div><BrandMark className="auth-brand-mark"/><h1>Physics</h1><p>Samitha Rathnayake</p></>;
   const feedback = <>{error && <p className="field-error" role="alert">{error}</p>}{notice && <p className="field-help" role="status">{notice}</p>}</>;
   if (session === undefined) return <div className="auth-page"><section className="auth-card">{brand}<p>Checking your session...</p></section></div>;
   if (linkError || showReset || (!session && mode)) return <div className="auth-page"><form className="auth-card" onSubmit={sendLink}>
@@ -104,3 +105,4 @@ export default function PasswordAccess({ children }) {
   return children({ notice, onPassword: () => { setMode("change"); setPassword(""); setConfirmation(""); setNotice(""); },
     onReset: value => { setShowReset(true); setEmail(value || ""); setError(""); setNotice(""); } });
 }
+

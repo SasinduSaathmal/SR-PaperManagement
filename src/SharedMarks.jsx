@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient.js";
+import BrandMark from "./BrandMark.jsx";
 import SharedStudents from "./SharedStudents.jsx";
 import OnlineMarksImport from "./OnlineMarksImport.jsx";
 import SharedReports from "./SharedReports.jsx";
@@ -21,7 +22,6 @@ async function request(name, args) {
     ? "The request timed out. It may have reached the server. Refresh to check; retrying the same saved draft is safe." : error.message); }
   finally { clearTimeout(timer); }
 }
-function MarkIcon() { return <svg className="brand-mark" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><ellipse cx="22" cy="22" rx="19" ry="7"/><ellipse cx="22" cy="22" rx="19" ry="7" transform="rotate(60 22 22)"/><ellipse cx="22" cy="22" rx="19" ry="7" transform="rotate(120 22 22)"/><circle cx="22" cy="22" r="2" fill="currentColor"/></svg>; }
 
 export default function SharedMarks({ profile }) {
   const [index, setIndex] = useState({ groups: [], tests: [], profiles: [] });
@@ -77,11 +77,11 @@ export default function SharedMarks({ profile }) {
   }, [pending]);
   const navigation = [{ id: "home", label: "Overview" }, { id: "marks", label: "Test workspace" }, { id: "students", label: "Students" }, { id: "rankings", label: "Rankings & reports" }, ...(admin ? [{ id: "accounts", label: "Accounts" }] : [])];
   return <div className="app-shell shared-marks-shell">
-    <aside className="sidebar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage("home"); }}><MarkIcon/><span><strong>Physics</strong><small>Samitha Rathnayake</small></span></a>
+    <aside className="sidebar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage("home"); }}><BrandMark/><span><strong>Physics</strong><small>Samitha Rathnayake</small></span></a>
       <div className="workspace-label">MARKS MANAGEMENT</div><nav aria-label="Main navigation">{navigation.map(n => <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} onClick={() => { setPage(n.id); if (n.id === "students") refreshIndex(); }}>{n.label}</button>)}</nav>
       <div className="sidebar-bottom"><div className="lesson-card"><strong>Shared marking desk</strong><p>Scores and submissions are saved to the same database for every account.</p></div></div>
     </aside>
-    <div className="main-shell"><header className="topbar"><span className="breadcrumb">Workspace / {navigation.find(n => n.id === page)?.label}</span><div className="topbar-actions"><span className="badge">Shared database</span><span className="account-label">{profile.display_name} · {admin ? "Admin & marker" : "Marker"}</span></div></header>
+    <div className="main-shell"><header className="topbar"><BrandMark className="topbar-brand-mark"/><span className="breadcrumb">Workspace / {navigation.find(n => n.id === page)?.label}</span><div className="topbar-actions"><span className="badge">Shared database</span><span className="account-label">{profile.display_name} · {admin ? "Admin & marker" : "Marker"}</span></div></header>
       <main><div className="page-heading"><div><div className="eyebrow">{group?.exam_year || "SHARED"} EXAM GROUP</div><h1>{navigation.find(n => n.id === page)?.label}</h1><p>Student records, test marks and marker submissions shared across accounts.</p></div>
         {page !== "students" && page !== "accounts" && <label className="group-picker"><span>Exam-year group</span><select aria-label="Exam-year group" value={groupId} disabled={loading || showCreate} onChange={e => setGroupId(e.target.value)}>
           {!index.groups.length && <option value="">No groups available</option>}{index.groups.map(g => <option key={g.id} value={g.id}>{g.exam_year} students{g.is_archived ? " · Archived" : ""}</option>)}</select></label>}</div>

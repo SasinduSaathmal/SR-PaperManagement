@@ -4,6 +4,7 @@ import { readOnlineFile, onlineRows, checkOnlineTarget, previewOnlineRows } from
 import { officialCode } from "./studentImport.js";
 import { recoveryCandidate,recoverDateMarks } from "./dateMarkRecovery.js";
 import { moduleLoadMessage } from "./moduleLoading.js";
+import FileUploadField from "./FileUploadField.jsx";
 
 export default function OnlineMarksImport({ snapshot, onChanged }) {
   const [batches, setBatches] = useState([]), [error, setError] = useState(""), [notice, setNotice] = useState("");
@@ -42,10 +43,10 @@ export default function OnlineMarksImport({ snapshot, onChanged }) {
     } catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const pending = batches.flatMap(b => b.rows.filter(r => r.status === "Pending").map(r => ({ ...r, filename: b.filename })));
-  return <section className="panel online-import"><div className="panel-title-row"><h3>Online marks import</h3><button className="secondary-button" disabled={busy} onClick={refresh}>Refresh imports</button></div>
+  return <section className="panel workspace-panel online-import"><div className="panel-title-row"><h3>Online marks import</h3><button className="secondary-button" disabled={busy} onClick={refresh}>Refresh imports</button></div>
     <p>Upload the original online export (.xls HTML table), or a single-sheet .xlsx/CSV. Import all districts. Online zeroes are skipped; existing student details are preserved.</p>
     {!editable && <p className="readonly-note">Reopen the test and restore its group before importing or reviewing rows.</p>}
-    <label>Online export<input type="file" accept=".xls,.xlsx,.csv,.html,.htm" disabled={busy || !editable} onChange={e => { chooseFile(e.target.files[0]); e.target.value = ""; }}/></label>
+    <FileUploadField label="Online export" accept=".xls,.xlsx,.csv,.html,.htm" disabled={busy || !editable} hint="Original HTML-table .xls, .xlsx or CSV · Up to 5 MB" onChange={e => { chooseFile(e.target.files[0]); e.target.value = ""; }}/>
     {error && <p className="alert" role="alert">{error}</p>}{loadError && <p className="alert" role="alert">{loadError}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     {file && <><h4>Preview · {file.name}</h4><p>{file.heading || "No test heading detected"}</p>
       {targetErrors.map(e => <p className="alert" key={e}>{e}</p>)}
@@ -87,9 +88,9 @@ function ReviewOnlineRow({ row, snapshot, onClose, onSaved }) {
   }
   return <section className="draft-review"><h4>Review row {row.row_number}</h4><div className="shared-fields">
     <label>Official ID<input value={values.code} disabled={busy} onChange={e => change("code",e.target.value)}/></label><label>Original score / maximum<input value={values.mark} disabled={busy} onChange={e => change("mark",e.target.value)}/></label>
-    {student ? <p>Matched database student: {student.name}, {student.school}, {student.stream}. These details will be preserved.</p> : <><label><input type="checkbox" checked={values.create_student} disabled={busy} onChange={e => change("create_student",e.target.checked)}/>Create this missing student</label>
+    {student ? <p>Matched database student: {student.name}, {student.school}, {student.stream}. These details will be preserved.</p> : <><label className="check-field"><input type="checkbox" checked={values.create_student} disabled={busy} onChange={e => change("create_student",e.target.checked)}/>Create this missing student</label>
       <label>Name<input maxLength={200} disabled={busy} value={values.name} onChange={e => change("name",e.target.value)}/></label><label>School<input maxLength={200} disabled={busy} value={values.school} onChange={e => change("school",e.target.value)}/></label><label>Stream<select disabled={busy} value={values.stream} onChange={e => change("stream",e.target.value)}><option value="">Choose stream</option><option>Maths</option><option>Bio</option></select></label></>}
-    {score && <label><input type="checkbox" disabled={busy} checked={replace} onChange={e => { setReplace(e.target.checked); request.current=null; }}/>Replace existing {score.source} score {score.cents / 100} (version {score.version})</label>}
+    {score && <label className="check-field"><input type="checkbox" disabled={busy} checked={replace} onChange={e => { setReplace(e.target.checked); request.current=null; }}/>Replace existing {score.source} score {score.cents / 100} (version {score.version})</label>}
     <label>Reason for replacement or dismissal<input maxLength={500} disabled={busy} value={reason} onChange={e => { setReason(e.target.value); request.current=null; }}/></label></div>
     {scoreChanged && <p className="alert" role="alert">This score changed while you were reviewing it. Cancel review and open the row again to check the latest value.</p>}
     {error && <p className="alert" role="alert">{error}</p>}<div className="shared-form-actions"><button className="primary-button" disabled={busy || scoreChanged} onClick={() => save("import")}>Import reviewed row</button><button className="secondary-button" disabled={busy || !reason.trim()} onClick={() => save("dismiss")}>Dismiss with reason</button><button className="text-button" disabled={busy} onClick={onClose}>Cancel review</button></div>
