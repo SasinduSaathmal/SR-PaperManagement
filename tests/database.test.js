@@ -1,0 +1,70 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { PGlite } from "@electric-sql/pglite";
+
+test("database import, removal and marker export enforce permissions and preserve records", async () => {
+  const db = new PGlite();
+  const admin = "00000000-0000-0000-0000-000000000001", marker = "00000000-0000-0000-0000-000000000002";
+  try {
+    await db.exec(`create role anon; create role authenticated; create schema auth; create schema app_private;
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
+      create table public.profiles(id uuid primary key, display_name text, role text, is_active boolean);
+      create function app_private.is_admin() returns boolean language sql stable as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='admin' and is_active) $$;
+      create function app_private.is_active_member() returns boolean language sql stable as $$ select exists(select 1 from public.profiles where id=auth.uid() and is_active) $$;
+      insert into public.profiles values('${admin}','Admin','admin',true),('${marker}','Marker','marker',true);`);
+    for (const file of ["002_shared_students.sql", "003_student_management.sql", "004_shared_test_marks.sql", "005_import_remove_export.sql"])
+      await db.exec(await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8"));
+    await db.exec(`set test.uid='${admin}'`);
+    const group = (await db.query("select id from exam_groups where exam_year=2028")).rows[0].id;
+    const rpc = async (sql, args = []) => (await db.query(`select ${sql} as result`, args)).rows[0].result;
+    const rows = [{ name: "A", school: "School", stream: "Maths", officialId: "0005" }, { name: "B", school: "School", stream: "Bio", officialId: "" }];
+    const request = crypto.randomUUID();
+    const imported = await rpc("app_import_students($1,$2,$3)", [group, JSON.stringify(rows), request]);
+    assert.deepEqual(imported, { added: 2, skipped: 0 });
+    assert.deepEqual(await rpc("app_import_students($1,$2,$3)", [group, JSON.stringify(rows), request]), imported);
+    assert.deepEqual(await rpc("app_import_students($1,$2,$3)", [group, JSON.stringify(rows), crypto.randomUUID()]), { added: 0, skipped: 2 });
+    const count = async () => Number((await db.query("select count(*) from enrolments")).rows[0].count);
+    await assert.rejects(() => rpc("app_import_students($1,$2,$3)", [group, JSON.stringify([{ name: "Rollback", school: "School", stream: "Maths" }, { name: "Bad", school: "School", stream: "No" }]), crypto.randomUUID()]), /Maths or Bio/);
+    assert.equal(await count(), 2);
+    await assert.rejects(() => rpc("app_import_students($1,$2,$3)", [group, JSON.stringify([{ ...rows[0], name: "Changed name" }]), crypto.randomUUID()]), /different details/);
+    assert.equal((await db.query("select name from students order by name")).rows[0].name, "A");
+    await db.exec(`set test.uid='${marker}'`);
+    await assert.rejects(() => rpc("app_import_students($1,$2,$3)", [group, JSON.stringify(rows), crypto.randomUUID()]), /admins/);
+    await db.exec(`set test.uid='${admin}'`);
+    const create = async paper => (await rpc("app_create_marks_test($1,'Phase 1',$2,'2026-11-11','150',$3,$4)", [group, paper, [admin, marker], crypto.randomUUID()])).id;
+    const empty = await create(1);
+    const removeReq = crypto.randomUUID();
+    await db.exec(`set test.uid='${marker}'`);
+    await assert.rejects(() => rpc("app_remove_empty_test($1,1,$2)", [empty, removeReq]), /admins/);
+    await db.exec(`set test.uid='${admin}'`);
+    await assert.rejects(() => rpc("app_remove_empty_test($1,99,$2)", [empty, crypto.randomUUID()]), /test changed/);
+    assert.deepEqual(await rpc("app_remove_empty_test($1,1,$2)", [empty, removeReq]), { removed: true });
+    assert.deepEqual(await rpc("app_remove_empty_test($1,1,$2)", [empty, removeReq]), { removed: true });
+    const tid = await create(2);
+    await assert.rejects(() => rpc("app_export_marker_students($1,$2)", [tid, marker]), /Close this test/);
+    const student = (await db.query("select id from enrolments where student_code='SC/2028/5'")).rows[0].id;
+    await db.exec(`set test.uid='${marker}'`);
+    await rpc("app_save_test_score($1,$2,'0',0,$3)", [tid, student, crypto.randomUUID()]);
+    await rpc("app_submit_test_batch($1,1,$2)", [tid, crypto.randomUUID()]);
+    await db.exec(`set test.uid='${admin}'`);
+    // Admin corrections retain marker ownership and are exported as final values.
+    await rpc("app_save_test_score($1,$2,'12.25',1,$3)", [tid, student, crypto.randomUUID()]);
+    let revision = (await db.query("select revision from marks_tests where id=$1", [tid])).rows[0].revision;
+    await assert.rejects(() => rpc("app_remove_empty_test($1,$2,$3)", [tid, revision, crypto.randomUUID()]), /recorded work/);
+    await rpc("app_submit_test_batch($1,0,$2)", [tid, crypto.randomUUID()]);
+    let snap = await rpc("app_get_test_workspace($1)", [tid]);
+    await rpc("app_complete_marks_test($1,'zero',$2,$3,$4)", [tid, snap.test.revision, snap.students.filter(s=>s.id!==student).map(s=>s.id), crypto.randomUUID()]);
+    snap = await rpc("app_get_test_workspace($1)", [tid]);
+    await rpc("app_complete_marks_test($1,'close',$2,'{}',$3)", [tid, snap.test.revision, crypto.randomUUID()]);
+    const data = await rpc("app_export_marker_students($1,$2)", [tid, marker]);
+    assert.equal(data.rows.length, 1); assert.equal(data.rows[0].cents, 1225); assert.equal(data.rows[0].name, "A");
+    await db.exec(`set test.uid='${marker}'`);
+    await assert.rejects(() => rpc("app_export_marker_students($1,$2)", [tid, admin]), /own marker/);
+    assert.equal((await rpc("app_export_marker_students($1,$2)", [tid, marker])).rows.length, 1);
+    await db.exec(`set test.uid='${admin}'`);
+    await rpc("app_set_group_archived($1,true)", [group]);
+    await assert.rejects(() => rpc("app_import_students($1,$2,$3)", [group, JSON.stringify(rows), crypto.randomUUID()]), /read-only/);
+    assert.equal((await rpc("app_export_marker_students($1,$2)", [tid, marker])).rows.length, 1);
+  } finally { await db.close(); }
+});
