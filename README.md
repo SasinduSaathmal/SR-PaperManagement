@@ -1,5 +1,7 @@
 # Physics - Samitha Rathnayake
 
+Online imports and immutable PDF/Excel report versions: see [setup and usage](docs/ONLINE_IMPORT_REPORTS.md). Apply `supabase/006_online_import_reports.sql` before deploying that update.
+
 Current shared-database feature update: see [student import, empty-test removal and marker Excel downloads](docs/IMPORT_REMOVE_EXPORT.md). Apply `supabase/005_import_remove_export.sql` before deploying this update. The Stage 1 notes below describe the earlier teaching prototype.
 
 Stage 1 of the student marks system: React with JavaScript and Vite.

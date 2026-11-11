@@ -2814,3 +2814,13 @@ html[data-theme="dark"] .completion-panel .completion-summary { color: #8dbbff; 
 .import-preview th { position: sticky; top: 0; background: var(--surface, #fff); z-index: 1; }
 .marker-downloads { margin: 20px 0; }
 .marker-downloads .completion-actions { flex-wrap: wrap; gap: 12px; }
+
+.online-import,.reports-workspace > .panel { margin: 24px 0; }
+.online-import input[type="file"] { max-width:100%; }
+.report-test-list { display:grid; gap:12px; max-height:320px; overflow:auto; padding:16px; margin:18px 0; }
+.report-test-list label,.import-confirm { display:flex; align-items:flex-start; gap:10px; }
+.report-test-list input[type="checkbox"],.import-confirm input[type="checkbox"] { width:auto; flex-shrink:0; }
+.import-confirm { margin:18px 0; }
+.import-history { padding:16px 0; border-bottom:1px solid var(--border,#ddd); }
+.online-import > label,.reports-workspace .shared-fields { margin:16px 0; }
+.reports-workspace .shared-form-actions { flex-wrap:wrap; }
