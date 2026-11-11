@@ -12,7 +12,7 @@ The automated suite runs all migrations 001–012 in disposable PostgreSQL. Its 
 
 Recovery checks also deliberately remove history, leak a write permission, and omit the custom Auth trigger. Each is detected. Reinstalling the Auth trigger retains the hardened invitation-only profile behavior.
 
-This is an embedded database rehearsal. A backup of the hosted project and a restore into a separate Supabase project still need to be performed locally with the steps below. Neither has been performed against production by these tests.
+The automated rehearsal is an embedded database test and does not access production. The owner subsequently completed the [native Windows hosted recovery checks](WINDOWS_NATIVE_BACKUP.md#verified-run-11-november-2026) on 11 November 2026, including restored admin sign-in and the workspace API. That native route uses a custom-format archive. The optional CLI route below uses separate SQL files and has not been exercised by that run.
 
 ## Before the first backup
 

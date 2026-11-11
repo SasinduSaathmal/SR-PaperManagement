@@ -84,4 +84,17 @@ The optional `backup_inventory.sql` in the prepared folder produces a read-only 
 
 Record the archive hash, code revision, restore result and browser review result. Take a fresh archive before any real cleanup or database migration. Trial cleanup remains a separate, owner-directed operation after recovery verification.
 
+## Verified run: 11 November 2026
+
+The owner performed the native procedure on Windows using PostgreSQL client tools 17.11 and an isolated Supabase destination running PostgreSQL 17.11 (`physics-restore-check`). Reported results:
+
+- The custom archive was created successfully (397,862 bytes), decoded successfully, and contained all 21 application tables plus `auth.users` and `auth.identities`.
+- The hosted restore passed exact row-count checks for every selected data table, plus the application account-link, RLS, RPC-permission and required-trigger assertions.
+- The owner inspected familiar restored records in the test project's Table Editor.
+- Password sign-in against the restored project's Auth API succeeded with the existing admin account, and `app_get_test_workspace` loaded successfully using that signed-in account's JWT and the test project's publishable key.
+
+This verifies database/backend recovery for that archive. It does not record a full browser marking/report-download rehearsal on an isolated restored website; production marker workflows had been checked separately. The native update's 38 automated tests also passed. No production data cleanup or production database cutover was performed as part of this verification.
+
+Keep the archive's generated SHA-256/row-count manifest with the private backup. Take a fresh archive before a later cleanup or migration; this run does not verify future backups automatically.
+
 References: [PostgreSQL 17 pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html), [PostgreSQL 17 pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [Supabase connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supabase restore considerations](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
