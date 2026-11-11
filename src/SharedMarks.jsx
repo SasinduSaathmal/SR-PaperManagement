@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabaseClient.js";
 import SharedStudents from "./SharedStudents.jsx";
 import OnlineMarksImport from "./OnlineMarksImport.jsx";
 import SharedReports from "./SharedReports.jsx";
+import TrialDataCleanup from "./TrialDataCleanup.jsx";
 import { featureRequest } from "./featureApi.js";
 import { downloadMarker } from "./workbooks.js";
 import { parseMark, formatMark } from "./domain.js";
@@ -86,13 +87,14 @@ export default function SharedMarks({ profile }) {
         {page === "students" ? <SharedStudents profile={profile}/> : page === "rankings" ? (group ? <SharedReports key={group.id} group={group} tests={tests} profile={profile} pendingDrafts={pending}/> : <p>Choose an exam group.</p>) : <>
           <div className="shared-marks-toolbar"><button className="secondary-button" onClick={refreshIndex}>Refresh tests</button>{admin && <button className="primary-button" disabled={!group || group.is_archived || !!error} onClick={() => setShowCreate(true)}>Create test</button>}<span className="muted">{pending ? `${pending} local draft(s) waiting to sync` : "No pending local drafts"}</span></div>
           {group?.is_archived && <p className="readonly-note">Archived group: tests and scores are read-only.</p>}
-          {showCreate && group && <CreateTest group={group} profiles={index.profiles} profile={profile} onClose={() => setShowCreate(false)} onCreated={id => { setShowCreate(false); setTestId(id); refreshIndex(); setPage("marks"); }}/>} 
+          {showCreate && group && <CreateTest group={group} profiles={index.profiles} profile={profile} onClose={() => setShowCreate(false)} onCreated={id => { setShowCreate(false); setTestId(id); refreshIndex(); setPage("marks"); }}/>}
           {loading ? <p className="shared-empty">Loading shared tests…</p> : !tests.length ? <section className="panel shared-empty"><h2>No shared tests in this group yet</h2><p>{admin ? "Create a test and select its participating markers to start." : "An admin must create a test and select its markers."}</p><p>Earlier practice tests stay in this browser and are not imported into real records.</p></section> : <>
             {page === "home" && <div className="test-grid">{tests.map(t => <button className="test-card panel" key={t.id} onClick={() => { setTestId(t.id); setPage("marks"); }}><div className="test-card-top"><span className="badge">{t.status}</span></div><p>{t.phase}</p><h2>Paper {t.paper}</h2><span>{formatMark(t.max_cents)} maximum marks · {t.test_date}</span><div className="test-card-foot">Open workspace →</div></button>)}</div>}
             <div hidden={page === "home"}><label className="shared-test-select">Selected test<select aria-label="Selected test" value={testId} onChange={e => setTestId(e.target.value)}>{tests.map(t => <option key={t.id} value={t.id}>{t.phase} · Paper {t.paper} · {t.status}</option>)}</select></label></div>
             {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/></div>}
           </>}
         </>}
+        {page === "home" && admin && group && <TrialDataCleanup key={group.id} group={group} profileId={profile.id} tests={tests} onCleared={() => { setTestId(""); setShowCreate(false); refreshIndex(); }}/>}
         <footer className="page-footer"><span>Physics - Samitha Rathnayake</span><span>Only server-saved marks enter rankings.</span></footer>
       </main></div>
     <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(n => <button key={n.id} className={page === n.id ? "active" : ""} onClick={() => setPage(n.id)}><span>{n.id === "marks" ? "Enter marks" : n.label}</span></button>)}</nav>
