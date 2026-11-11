@@ -13,7 +13,7 @@ export async function readOnlineFile(file) {
   const bytes = await file.arrayBuffer();
   const raw = new TextDecoder().decode(bytes);
   // The original .xls exports are HTML; never interpret their scores as dates.
-  if (/<table[\s>]/i.test(raw)) return parseOnlineHTML(raw);
+  if (/<table[\s>]|<frameset[\s>]|Excel Workbook Frameset/i.test(raw)) return parseOnlineHTML(raw);
   if (/\.xls$/i.test(file.name)) throw Error("This .xls is not the supported HTML-table export. Use the original downloaded export, or save a genuine workbook as .xlsx.");
   const sheets = await readStudentFile(file);
   if (sheets.length !== 1) throw Error("For online imports, upload one worksheet at a time.");

@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabaseClient.js";
 import SharedStudents from "./SharedStudents.jsx";
 import OnlineMarksImport from "./OnlineMarksImport.jsx";
 import SharedReports from "./SharedReports.jsx";
+import { featureRequest } from "./featureApi.js";
 import { downloadMarker } from "./workbooks.js";
 import { parseMark, formatMark } from "./domain.js";
 import { loadMarksIndex, marksRequest, loadSharedDrafts, persistSharedDrafts, participantStatus, completionOf } from "./sharedMarksApi.js";
@@ -128,6 +129,7 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
   const [query, setQuery] = useState(""), [selectedId, setSelectedId] = useState(""), [scope, setScope] = useState("all");
   const [exporting, setExporting] = useState(false);
   const removeRequest = useRef(null);
+  const emptyRequests = useRef({});
   const [draftErrors, setDraftErrors] = useState({});
   const attempts = useRef({}), savingPromise = useRef(null), mounted = useRef(true), readSequence = useRef(0);
   const admin = profile.role === "admin";
@@ -216,6 +218,21 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
       setNotice("Your latest batch is submitted. Editing your own marks will require resubmission."); await refresh(); onChanged();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
+  async function confirmEmptyBatch(participant) {
+    const local = loadSharedDrafts(participant.marker_id);
+    if (local.error || Object.values(local.drafts).some(d => d.testId === testId)) {
+      setError("This device has pending or unreadable drafts for that marker. Save or discard them before confirming an empty batch."); return;
+    }
+    if (!window.confirm(`Confirm that ${participant.name} has no papers for this test? Check with them that they have no unsynced drafts on another device. No scores or ownership will change.`)) return;
+    setBusy(true); setError("");
+    const key = `${participant.marker_id}:${participant.batch_revision}`;
+    emptyRequests.current[key] ||= uuid();
+    try {
+      await featureRequest("app_confirm_empty_marker_batch", { p_test_id:testId, p_marker_id:participant.marker_id, p_expected_batch_revision:participant.batch_revision, p_request_id:emptyRequests.current[key] });
+      setNotice(`${participant.name}'s empty batch is confirmed. No scores were changed.`); await refresh(); onChanged();
+    } catch(e) { setError(e.message.includes("006_online_import_reports") ? "Run 007_zero_fill_empty_batches.sql in Supabase to enable empty-batch confirmation." : e.message); }
+    finally { setBusy(false); }
+  }
   function complete(which) {
     if (currentDrafts.length) { setError("Save or discard your drafts for this test first."); return; }
     const message = which === "zero" ? `Add zeroes for ${completion.missing.length} active student(s) without a score? Existing scores and submitted batches will be preserved.`
@@ -268,7 +285,7 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
         {selected ? <div className="shared-selected"><h3>{selected.name}</h3><p>{selected.student_code} · {selected.school} · {selected.stream}{selected.is_active ? "" : " · Inactive"}</p><label>Final score / {formatMark(test.max_cents)}{input(selected)}</label><button className="text-button" onClick={() => { setSelectedId(""); setQuery(""); }}>Next student</button></div>
           : <div className="search-results">{matches.slice(0, query ? 12 : 4).map(s => <button className="student-result" key={s.id} onClick={() => setSelectedId(s.id)}><span className="student-result-text"><strong>{s.name}</strong><small>{s.student_code} · {s.school}</small></span><span className="badge">{s.stream}</span></button>)}{!matches.length && <p className="shared-empty">No matching students. Add a student from the Students screen, then Refresh scores.</p>}</div>}
       </section> : <section className="panel"><div className="table-scroll"><table><thead><tr><th>Student</th><th>ID / Stream</th><th>Score / {formatMark(test.max_cents)}</th><th>Entered by</th></tr></thead><tbody>{students.map(s => { const old = scoresById.get(s.id); return <tr key={s.id}><td><strong>{s.name}</strong><small>{s.school}{s.is_active ? "" : " · Inactive"}</small></td><td>{s.student_code}<small>{s.stream}</small></td><td>{input(s)}</td><td>{old && !old.is_deleted ? old.marker_name || (old.source === "Online" ? "Online import" : "Admin zero fill") : "—"}</td></tr>; })}</tbody></table></div></section>}
-      <div className="shared-submit-bar"><span>{status} · {currentDrafts.length ? `${currentDrafts.length} draft(s) waiting to sync` : "Your scores are saved to the server."}</span><button className="primary-button" disabled={!open || !mine || busy || blocked} onClick={submit}>{busy ? "Please wait…" : "Finish & Submit"}</button></div>
+      <div className="shared-submit-bar"><span>{status} · {currentDrafts.length ? `${currentDrafts.length} draft(s) waiting to sync` : mine && !allScores.some(s => s.marker_id === profile.id) ? "No papers entered by you. You can submit an empty batch." : "Your scores are saved to the server."}</span><button className="primary-button" disabled={!open || !mine || busy || blocked} onClick={submit}>{busy ? "Please wait…" : mine && !allScores.some(s => s.marker_id === profile.id) && !currentDrafts.length ? "Submit empty batch (no papers)" : "Finish & Submit"}</button></div>
       {!!currentDrafts.length && <section className="draft-review"><h3>Drafts waiting to sync</h3>{currentDrafts.map(([id,d]) => <div key={id}><span>{d.name || d.enrolmentId}: {parseMark(d.text, test.max_cents / 100).error || draftErrors[id] || "Waiting to save"}</span><button className="text-button" disabled={saving || busy || !open} onClick={() => flush(true)}>Retry save</button>
         <button className="text-button" disabled={saving || busy} onClick={() => { if (!window.confirm("Discard this unsynced draft? The server-saved score will stay unchanged.")) return; try { changeDraft(id, null, d.requestId); } catch(e) { setError(e.message); } }}>Discard draft</button></div>)}<p>For a stale-score conflict, copy your intended mark, Refresh scores, discard the old draft and re-enter after reviewing the saved value. Retrying alone never overwrites a newer score.</p></section>}
       <section className="panel recent-panel"><div className="panel-title-row"><h3>Entries at a glance</h3><div className="segmented small"><button className={scope === "mine" ? "selected" : ""} onClick={() => setScope("mine")}>My entries</button><button className={scope === "all" ? "selected" : ""} onClick={() => setScope("all")}>All markers</button></div></div>
@@ -276,7 +293,13 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
       </section>
       {snapshot.pending_online > 0 && <p className="alert" role="status">{snapshot.pending_online} online import row(s) require admin review before this test can be completed.</p>}
       <section className="panel completion-panel"><h3>{admin ? "Complete this test" : "Marker submissions"}</h3><p>{completion.missing.length} active student(s) without a score. {participants.length - completion.unsubmitted.length} of {participants.length} marker batches submitted.</p>
-        <ul className="shared-batch-list">{participants.map(p => <li key={p.marker_id}><span>{p.name}{p.is_active ? "" : " · Disabled account"}</span><strong>{participantStatus(p)}</strong></li>)}</ul>
+        <ul className="shared-batch-list">{participants.map(p => {
+          const count = allScores.filter(s => s.marker_id === p.marker_id).length;
+          const canConfirm = p.batch_revision === 0 && !snapshot.scores.some(s => s.marker_id === p.marker_id);
+          return <li key={p.marker_id}><span>{p.name}{p.is_active ? "" : " · Disabled account"}<small>{count} paper entries</small></span><strong>{participantStatus(p)}</strong>
+            {admin && canConfirm && participantStatus(p) !== "Submitted" && <button className="secondary-button" disabled={!open || busy || saving || blocked} onClick={() => confirmEmptyBatch(p)}>Confirm no papers</button>}</li>;
+        })}</ul>
+        <p>A selected marker with no papers can submit an empty batch. Admins can confirm no papers only when that marker has no recorded work; other markers' entries stay unchanged.</p>
         {admin && <>{!!completion.missing.length && <details className="completion-review"><summary>Review students with no score ({completion.missing.length})</summary><ul>{completion.missing.map(s => <li key={s.id}>{s.name}<span>{s.student_code} · {s.stream}</span></li>)}</ul></details>}
           <div className="completion-actions"><button className="secondary-button" disabled={!open || busy || saving || currentDrafts.length > 0 || !completion.missing.length || completion.unsubmitted.length > 0 || snapshot.pending_online > 0} onClick={() => complete("zero")}>Add zeroes to remaining students ({completion.missing.length})</button>
             <button className="primary-button" disabled={!open || busy || saving || currentDrafts.length > 0 || completion.missing.length > 0 || completion.unsubmitted.length > 0 || snapshot.pending_online > 0} onClick={() => complete("close")}>Close test</button>

@@ -2824,3 +2824,5 @@ html[data-theme="dark"] .completion-panel .completion-summary { color: #8dbbff; 
 .import-history { padding:16px 0; border-bottom:1px solid var(--border,#ddd); }
 .online-import > label,.reports-workspace .shared-fields { margin:16px 0; }
 .reports-workspace .shared-form-actions { flex-wrap:wrap; }
+.shared-batch-list li { flex-wrap:wrap; gap:12px; }
+.shared-batch-list small { display:block; margin-top:4px; font-size:12px; }
