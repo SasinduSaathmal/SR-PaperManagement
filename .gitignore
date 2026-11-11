@@ -10,3 +10,15 @@ LEARNING_NOTES.md
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# Local database backups contain private student and Auth data.
+backups/
+*.backup
+*.dump
+roles.sql
+schema.sql
+data.sql
+inventory-*.json
+restored-inventory.json
+SHA256SUMS.json
+
