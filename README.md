@@ -1,5 +1,7 @@
 # Physics - Samitha Rathnayake
 
+Trial-data cleanup: see [admin cleanup before real marking](docs/TRIAL_DATA_CLEANUP.md). Apply `supabase/009_trial_data_cleanup.sql` before deploying this update. Installing it deletes nothing.
+
 Online import fixes: see [Excel date recovery and deployment loading](docs/ONLINE_DATE_RECOVERY.md). Apply `supabase/008_online_date_recovery.sql` before deploying this update.
 
 Marking fixes: see [zero-fill attribution, empty batches and Excel index files](docs/MARKING_BUG_FIXES.md). Apply `supabase/007_zero_fill_empty_batches.sql` before deploying these fixes.
