@@ -2907,3 +2907,5 @@ html[data-theme="dark"] .shared-marks-shell .draft-review { background:#1b293e; 
 }
 
 @media(max-width:760px) { .shared-marks-shell .topbar-brand-mark { display:block; width:32px; height:32px; flex-shrink:0; } }
+.shared-marks-shell .page-footer { align-items:center; flex-wrap:wrap; gap:10px 20px; border-top:1px solid var(--border); margin-top:24px; padding:20px 0; font-size:11px; line-height:1.6; }
+.shared-marks-shell .page-footer > .footer-brand { display:inline; color:var(--dark); font-weight:650; letter-spacing:.15px; }

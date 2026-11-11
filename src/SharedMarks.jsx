@@ -78,8 +78,7 @@ export default function SharedMarks({ profile }) {
   const navigation = [{ id: "home", label: "Overview" }, { id: "marks", label: "Test workspace" }, { id: "students", label: "Students" }, { id: "rankings", label: "Rankings & reports" }, ...(admin ? [{ id: "accounts", label: "Accounts" }] : [])];
   return <div className="app-shell shared-marks-shell">
     <aside className="sidebar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage("home"); }}><BrandMark/><span><strong>Physics</strong><small>Samitha Rathnayake</small></span></a>
-      <div className="workspace-label">MARKS MANAGEMENT</div><nav aria-label="Main navigation">{navigation.map(n => <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} onClick={() => { setPage(n.id); if (n.id === "students") refreshIndex(); }}>{n.label}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="lesson-card"><strong>Shared marking desk</strong><p>Scores and submissions are saved to the same database for every account.</p></div></div>
+      <div className="workspace-label">MARKS MANAGEMENT</div><nav aria-label="Main navigation">{navigation.map(n => <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} aria-current={page === n.id ? "page" : undefined} onClick={() => { setPage(n.id); if (n.id === "students") refreshIndex(); }}>{n.label}</button>)}</nav>
     </aside>
     <div className="main-shell"><header className="topbar"><BrandMark className="topbar-brand-mark"/><span className="breadcrumb">Workspace / {navigation.find(n => n.id === page)?.label}</span><div className="topbar-actions"><span className="badge">Shared database</span><span className="account-label">{profile.display_name} · {admin ? "Admin & marker" : "Marker"}</span></div></header>
       <main><div className="page-heading"><div><div className="eyebrow">{group?.exam_year || "SHARED"} EXAM GROUP</div><h1>{navigation.find(n => n.id === page)?.label}</h1><p>Student records, test marks and marker submissions shared across accounts.</p></div>
@@ -98,9 +97,9 @@ export default function SharedMarks({ profile }) {
           </>}
         </>}
         {page === "home" && admin && group && <TrialDataCleanup key={group.id} group={group} profileId={profile.id} tests={tests} onCleared={() => { setTestId(""); setShowCreate(false); refreshIndex(); }}/>}
-        <footer className="page-footer"><span>Physics - Samitha Rathnayake</span><span>Only server-saved marks enter rankings.</span></footer>
+        <footer className="page-footer"><span>Physics - Samitha Rathnayake</span><span className="footer-brand">Innovative Physics</span></footer>
       </main></div>
-    <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(n => <button key={n.id} className={page === n.id ? "active" : ""} onClick={() => setPage(n.id)}><span>{n.id === "marks" ? "Enter marks" : n.label}</span></button>)}</nav>
+    <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(n => <button key={n.id} className={page === n.id ? "active" : ""} aria-current={page === n.id ? "page" : undefined} onClick={() => setPage(n.id)}><span>{n.id === "marks" ? "Enter marks" : n.label}</span></button>)}</nav>
   </div>;
 }
 
