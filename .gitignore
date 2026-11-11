@@ -21,4 +21,5 @@ data.sql
 inventory-*.json
 restored-inventory.json
 SHA256SUMS.json
+restore-prepared-*/
 
