@@ -43,6 +43,8 @@ The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview 
 - [Database backup, restore checks and final release review](docs/BACKUP_AND_RECOVERY.md)
 - [Windows native backup and restore without Docker/WSL](docs/WINDOWS_NATIVE_BACKUP.md)
 
-Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite. The owner has verified invitation delivery and marker-side workflows on the configured deployment. Recovery tooling includes read-only database inventories, permission/trigger checks and a two-marker marking-to-report rehearsal in a disposable database. A hosted backup/restore rehearsal remains an operator step; no production cleanup or restore is run by the tests.
+Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite (38 tests passed with the native recovery update). The owner has verified invitation delivery and marker-side workflows on the configured deployment. On 11 November 2026, the owner also completed a native PostgreSQL 17.11 backup/restore into an isolated Supabase 17.11 project: archive readability, required tables, restored row counts, permissions/triggers, Table Editor review, restored admin sign-in and the test-workspace API all passed. See the [verified recovery run](docs/WINDOWS_NATIVE_BACKUP.md#verified-run-11-november-2026).
+
+The isolated restored website's full browser marking/report-download workflow has not been repeated; the production marker checks and automated two-marker workflow are separate evidence. No production cleanup or restore is run by the automated tests.
 
 The earlier local-only teaching prototype remains in source history and sample-data helpers; the signed-in website uses the shared database.
