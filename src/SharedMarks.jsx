@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient.js";
 import SharedStudents from "./SharedStudents.jsx";
+import { downloadMarker } from "./workbooks.js";
 import { parseMark, formatMark, buildRanking } from "./domain.js";
 import { loadMarksIndex, marksRequest, loadSharedDrafts, persistSharedDrafts, participantStatus, completionOf } from "./sharedMarksApi.js";
 
@@ -86,7 +87,7 @@ export default function SharedMarks({ profile }) {
           {loading ? <p className="shared-empty">Loading shared tests…</p> : !tests.length ? <section className="panel shared-empty"><h2>No shared tests in this group yet</h2><p>{admin ? "Create a test and select its participating markers to start." : "An admin must create a test and select its markers."}</p><p>Earlier practice tests stay in this browser and are not imported into real records.</p></section> : <>
             {page === "home" && <div className="test-grid">{tests.map(t => <button className="test-card panel" key={t.id} onClick={() => { setTestId(t.id); setPage("marks"); }}><div className="test-card-top"><span className="badge">{t.status}</span></div><p>{t.phase}</p><h2>Paper {t.paper}</h2><span>{formatMark(t.max_cents)} maximum marks · {t.test_date}</span><div className="test-card-foot">Open workspace →</div></button>)}</div>}
             <div hidden={page === "home"}><label className="shared-test-select">Selected test<select aria-label="Selected test" value={testId} onChange={e => setTestId(e.target.value)}>{tests.map(t => <option key={t.id} value={t.id}>{t.phase} · Paper {t.paper} · {t.status}</option>)}</select></label></div>
-            {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex}/></div>}
+            {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/></div>}
           </>}
         </>}
         <footer className="page-footer"><span>Physics - Samitha Rathnayake</span><span>Only server-saved marks enter rankings.</span></footer>
@@ -118,11 +119,13 @@ function CreateTest({ group, profiles, profile, onClose, onCreated }) {
   </form>;
 }
 
-function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, blocked, onChanged }) {
+function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, blocked, onChanged, onRemoved }) {
   const [snapshot, setSnapshot] = useState(null), snapshotRef = useRef(null);
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [mode, setMode] = useState("form");
   const [query, setQuery] = useState(""), [selectedId, setSelectedId] = useState(""), [scope, setScope] = useState("all"), [stream, setStream] = useState("Maths");
+  const [exporting, setExporting] = useState(false);
+  const removeRequest = useRef(null);
   const [draftErrors, setDraftErrors] = useState({});
   const attempts = useRef({}), savingPromise = useRef(null), mounted = useRef(true), readSequence = useRef(0);
   const admin = profile.role === "admin";
@@ -218,6 +221,27 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
     if (!window.confirm(message)) return;
     action("app_complete_marks_test", { p_test_id: testId, p_action: which, p_expected_revision: test.revision, p_missing_ids: completion.missing.map(s => s.id) }, result => which === "zero" ? `Added zeroes for ${result.added} student(s).` : `Test status: ${result.status}.`);
   }
+  async function removeTest() {
+    setBusy(true); setError("");
+    try {
+      const stored = loadSharedDrafts(profile.id);
+      if (stored.error || Object.values(stored.drafts).some(d => d.testId === testId) || currentDrafts.length)
+        throw Error("Save or discard local drafts for this test before removing it.");
+      if (!window.confirm("Permanently remove this empty test? Ask other markers to discard any unsynced drafts first. Tests with recorded work must be cancelled instead.")) return;
+      if (removeRequest.current?.revision !== test.revision) removeRequest.current = { revision: test.revision, id: uuid() };
+      await request("app_remove_empty_test", { p_test_id: testId, p_expected_revision: test.revision, p_request_id: removeRequest.current.id });
+      onRemoved();
+    } catch(e) { setError(e.message.includes("004_shared_test_marks") ? "Run 005_import_remove_export.sql in Supabase to enable test removal." : e.message); }
+    finally { setBusy(false); }
+  }
+  async function exportMarker(markerId) {
+    setExporting(true); setError("");
+    try {
+      const data = await request("app_export_marker_students", { p_test_id: testId, p_marker_id: markerId });
+      await downloadMarker(data);
+    } catch(e) { setError(e.message.includes("004_shared_test_marks") ? "Run 005_import_remove_export.sql in Supabase to enable Excel downloads." : e.message); }
+    finally { setExporting(false); }
+  }
   function input(student) {
     const id = draftId(testId, student.id), draft = drafts[id], old = scoresById.get(student.id), score = old && !old.is_deleted ? old : null;
     const editable = open && student.is_active && !busy && !blocked && (score ? (score.marker_id === profile.id ? !!mine : admin) : !!mine);
@@ -234,6 +258,11 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
     <section className="test-strip"><div><strong>{test.phase} · Paper {test.paper}</strong><small>{test.test_date} · {formatMark(test.max_cents)} maximum marks</small></div><span className="badge">{test.status}</span><button className="secondary-button" disabled={saving || busy} onClick={refresh}>Refresh scores</button><span className="muted">Refreshes every 15 seconds</span></section>
     {error && <p className="alert" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     {(!open || !mine) && <p className="readonly-note">{!open ? "This test or exam group is read-only. Pending drafts are retained for recovery." : "You can view this test. Only selected participants enter new paper marks; admins can correct existing scores."}</p>}
+    {test.status === "Closed" && <section className="panel marker-downloads"><h3>Download submitted student data</h3>
+      <p>Final saved paper entries for each marker, including zero marks and admin corrections. Automatically filled absent-student zeroes are excluded.</p>
+      <div className="completion-actions">{participants.filter(p => admin || p.marker_id === profile.id).map(p => <button key={p.marker_id} className="secondary-button" disabled={exporting || busy || participantStatus(p) !== "Submitted"} onClick={() => exportMarker(p.marker_id)}>{exporting ? "Preparing…" : `Download ${p.name} .xlsx`}</button>)}</div>
+      <p className="field-help">Filename: Phase &lt;phase number&gt; Paper &lt;paper number&gt; &lt;marker’s name&gt;.xlsx</p>
+    </section>}
     {view === "rankings" ? <section className="panel shared-rankings"><div className="panel-title-row"><h2>{test.status === "Closed" ? "Closed-test ranking" : "Provisional ranking"}</h2><select aria-label="Ranking stream" value={stream} onChange={e => setStream(e.target.value)}><option>Maths</option><option>Bio</option></select></div>
       {!admin && test.status !== "Closed" ? <p className="shared-empty">Provisional rankings are admin-only. Choose a closed test.</p> : test.status === "Cancelled" ? <p className="shared-empty">Cancelled tests are excluded from rankings.</p> : <div className="table-scroll"><table><thead><tr><th>Rank</th><th>Student</th><th>School</th><th>Marks</th></tr></thead><tbody>{ranked.map(s => <tr key={s.key}><td>{s.rank}</td><td>{s.name}</td><td>{s.school}</td><td>{formatMark(s.total)}</td></tr>)}</tbody></table>{!ranked.length && <p className="shared-empty">No saved scores in this stream yet.</p>}</div>}<p className="shared-count">Live server-saved scores. Saved report versions and exports come in a later step.</p>
     </section> : <>
@@ -254,8 +283,9 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
         {admin && <>{!!completion.missing.length && <details className="completion-review"><summary>Review students with no score ({completion.missing.length})</summary><ul>{completion.missing.map(s => <li key={s.id}>{s.name}<span>{s.student_code} · {s.stream}</span></li>)}</ul></details>}
           <div className="completion-actions"><button className="secondary-button" disabled={!open || busy || saving || currentDrafts.length > 0 || !completion.missing.length || completion.unsubmitted.length > 0} onClick={() => complete("zero")}>Add zeroes to remaining students ({completion.missing.length})</button>
             <button className="primary-button" disabled={!open || busy || saving || currentDrafts.length > 0 || completion.missing.length > 0 || completion.unsubmitted.length > 0} onClick={() => complete("close")}>Close test</button>
-            {test.status !== "Open" && <button className="secondary-button" disabled={group.is_archived || busy || saving} onClick={() => complete("reopen")}>Reopen test</button>}
-            {test.status !== "Cancelled" && <button className="text-button" disabled={group.is_archived || busy || saving} onClick={() => complete("cancel")}>Cancel test</button>}
+            {test.status !== "Open" && <button className="secondary-button" disabled={group.is_archived || busy || saving || exporting} onClick={() => complete("reopen")}>Reopen test</button>}
+            {test.status !== "Cancelled" && <button className="text-button" disabled={group.is_archived || busy || saving || exporting} onClick={() => complete("cancel")}>Cancel test</button>}
+            <button className="text-button" disabled={group.is_archived || busy || saving || exporting || blocked || currentDrafts.length > 0 || snapshot.scores.length > 0 || snapshot.history.some(h => h.action !== "Created test") || participants.some(p => p.batch_revision > 0 || p.submitted_revision != null)} onClick={removeTest}>Remove empty test</button>
           </div><p>Every marker submits their latest batch first. Then add zeroes for the remaining students and close the test. The server rechecks the test revision and exact student list.</p></>}
       </section>
       {admin && <details className="panel shared-history"><summary>Recent test history (latest 100 events)</summary><div className="table-scroll"><table><thead><tr><th>Time</th><th>Actor</th><th>Student</th><th>Action</th><th>Before → After</th></tr></thead><tbody>{snapshot.history.map(h => <tr key={h.id}><td>{new Date(h.created_at).toLocaleString("en-GB", { timeZone: "Asia/Colombo" })}</td><td>{h.actor_name}</td><td>{students.find(s => s.id === h.enrolment_id)?.name || "—"}</td><td>{h.action}</td><td>{h.before_cents == null ? "—" : formatMark(h.before_cents)} → {h.after_cents == null ? "—" : formatMark(h.after_cents)}</td></tr>)}</tbody></table></div></details>}
@@ -263,3 +293,4 @@ function TestWorkspace({ testId, profile, view, drafts, draftsRef, changeDraft, 
   </>;
 }
 function SharedStat({ label, value }) { return <div className="stat-card"><div className="stat-top"><span>{label}</span></div><strong className={String(value).length > 7 ? "text-stat" : ""}>{value}</strong></div>; }
+

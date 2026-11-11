@@ -1,5 +1,7 @@
 # Physics - Samitha Rathnayake
 
+Current shared-database feature update: see [student import, empty-test removal and marker Excel downloads](docs/IMPORT_REMOVE_EXPORT.md). Apply `supabase/005_import_remove_export.sql` before deploying this update. The Stage 1 notes below describe the earlier teaching prototype.
+
 Stage 1 of the student marks system: React with JavaScript and Vite.
 
 This is a learning build with fictional records. It is not ready for real student marks. Accounts in the profile selector are sample views, not authentication. Saving uses this browser's local storage; it does not share work between users or devices. Supabase authentication, PostgreSQL permissions and shared saving are the next stage.
@@ -53,3 +55,4 @@ Start reading `LEARNING_NOTES.md`, then inspect the matching functions. Learning
 ## Not included yet
 
 Real email/password login, invitations, account disablement, database security policies, shared autosave, test administration, closing/archive workflows, repeater linking, bulk/online imports, conflict resolution, saved report snapshots, and PDF/Excel exports. The design document remains the specification for those stages. Prototype checks in browser JavaScript are useful for feedback but do not replace server-side permission enforcement.
+

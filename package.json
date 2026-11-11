@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
+    "exceljs": "^4.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.68.0",
+    "@electric-sql/pglite": "^0.5.16",
     "vite": "^7.0.0",
     "wrangler": "^4.160.0"
   }
