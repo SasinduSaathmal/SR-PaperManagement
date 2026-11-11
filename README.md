@@ -41,6 +41,7 @@ The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview 
 - [Admin cleanup of trial data](docs/TRIAL_DATA_CLEANUP.md)
 - [Identity, accounts and participant administration](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md)
 - [Database backup, restore checks and final release review](docs/BACKUP_AND_RECOVERY.md)
+- [Windows native backup and restore without Docker/WSL](docs/WINDOWS_NATIVE_BACKUP.md)
 
 Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite. The owner has verified invitation delivery and marker-side workflows on the configured deployment. Recovery tooling includes read-only database inventories, permission/trigger checks and a two-marker marking-to-report rehearsal in a disposable database. A hosted backup/restore rehearsal remains an operator step; no production cleanup or restore is run by the tests.
 

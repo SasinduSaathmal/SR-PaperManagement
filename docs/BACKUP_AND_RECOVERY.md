@@ -1,5 +1,7 @@
 # Database backup and recovery
 
+**Windows with limited RAM:** use [Windows native backup and restore](WINDOWS_NATIVE_BACKUP.md). That procedure uses PostgreSQL 17 client tools and a custom-format `.dump` archive, with no Docker or WSL. The CLI procedure below is optional and uses a different backup format; its restore commands do not apply to the native archive.
+
 The website's Excel/PDF downloads are reports. A recoverable installation also needs Auth accounts, profiles, enrolments, aliases, scores (including removed entries), submissions, import queues, history, retry receipts, cleanup tombstones, saved report snapshots, database functions and permissions.
 
 This procedure makes a Supabase logical backup and restores it into a **new, isolated Supabase project**. It does not overwrite the running website. There is no database-restore button in the website.
