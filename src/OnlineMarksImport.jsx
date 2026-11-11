@@ -2,11 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { featureRequest } from "./featureApi.js";
 import { readOnlineFile, onlineRows, checkOnlineTarget, previewOnlineRows } from "./onlineImport.js";
 import { officialCode } from "./studentImport.js";
+import { recoveryCandidate,recoverDateMarks } from "./dateMarkRecovery.js";
+import { moduleLoadMessage } from "./moduleLoading.js";
 
 export default function OnlineMarksImport({ snapshot, onChanged }) {
   const [batches, setBatches] = useState([]), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [file, setFile] = useState(null), [busy, setBusy] = useState(false), [selected, setSelected] = useState(null), [confirmed, setConfirmed] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [restoreDates,setRestoreDates] = useState(false);
   const receipt = useRef(null);
   const { test, group } = snapshot, editable = test.status === "Open" && !group.is_archived;
   async function refresh() {
@@ -19,21 +22,23 @@ export default function OnlineMarksImport({ snapshot, onChanged }) {
   }, [test.id, test.revision]);
   async function chooseFile(upload) {
     if (!upload) return;
-    setBusy(true); setFile(null); setError(""); setNotice(""); setConfirmed(false); receipt.current = null;
+    setBusy(true); setFile(null); setError(""); setNotice(""); setConfirmed(false); setRestoreDates(false); receipt.current = null;
     try {
       const source = await readOnlineFile(upload), rows = onlineRows(source.matrix);
       if (!rows.length) throw Error("This file has no student rows.");
       setFile({ name: upload.name, heading: source.heading, rows });
-    } catch(e) { setError(e.message); } finally { setBusy(false); }
+    } catch(e) { setError(moduleLoadMessage(e)); } finally { setBusy(false); }
   }
-  const targetErrors = file ? checkOnlineTarget(file.heading, file.rows, test, group.exam_year) : [];
-  const preview = file ? previewOnlineRows(file.rows, snapshot) : [];
+  const preparedRows = file ? recoverDateMarks(file.rows,test.max_cents,restoreDates) : [];
+  const recoverable = file ? file.rows.filter(row=>recoveryCandidate(row,test.max_cents)) : [];
+  const targetErrors = file ? checkOnlineTarget(file.heading, preparedRows, test, group.exam_year) : [];
+  const preview = file ? previewOnlineRows(preparedRows, snapshot) : [];
   async function stage() {
     setBusy(true); setError("");
     if (!receipt.current) receipt.current = crypto.randomUUID();
     try {
-      await featureRequest("app_stage_online_import", { p_test_id: test.id, p_filename: file.name, p_heading: file.heading, p_rows: file.rows, p_request_id: receipt.current });
-      setFile(null); receipt.current = null; setNotice("File processed. Valid scores saved; review pending rows below."); await refresh(); onChanged();
+      const result = await featureRequest("app_import_online_file", { p_test_id: test.id, p_filename: file.name, p_heading: file.heading, p_rows: preparedRows, p_request_id: receipt.current });
+      setFile(null); setSelected(null); receipt.current = null; setNotice(`File processed. ${result.recovered_pending || 0} earlier pending row(s) recovered from the file. Valid scores saved; review any remaining issues below.`); await refresh(); onChanged();
     } catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const pending = batches.flatMap(b => b.rows.filter(r => r.status === "Pending").map(r => ({ ...r, filename: b.filename })));
@@ -44,10 +49,12 @@ export default function OnlineMarksImport({ snapshot, onChanged }) {
     {error && <p className="alert" role="alert">{error}</p>}{loadError && <p className="alert" role="alert">{loadError}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     {file && <><h4>Preview · {file.name}</h4><p>{file.heading || "No test heading detected"}</p>
       {targetErrors.map(e => <p className="alert" key={e}>{e}</p>)}
-      <div className="table-scroll import-preview"><table><thead><tr><th>Row</th><th>Student ID / name</th><th>Original marks</th><th>Outcome</th></tr></thead><tbody>{preview.map((r,i) => <tr key={i}><td>{r.row_number}</td><td>{r.code}<small>{r.name}</small></td><td>{r.mark}</td><td><strong>{r.status}</strong><small>{r.detail}</small></td></tr>)}</tbody></table></div>
+      {!!recoverable.length && <label className="import-confirm"><input type="checkbox" disabled={busy} checked={restoreDates} onChange={e=>{setRestoreDates(e.target.checked);setConfirmed(false);receipt.current=null;}}/>Restore {recoverable.length} Excel month/year conversions as marks out of {test.max_cents/100} (for example, Dec-40 → 12 / 40). I have checked this interpretation against the original results.</label>}
+      <div className="table-scroll import-preview"><table><thead><tr><th>Row</th><th>Student ID / name</th><th>Original marks</th><th>Interpreted score</th><th>Outcome</th></tr></thead><tbody>{preview.map((r,i) => <tr key={i}><td>{r.row_number}</td><td>{r.code}<small>{r.name}</small></td><td>{r.mark_original || r.mark}</td><td>{r.mark_conversion ? r.mark : recoveryCandidate(r,test.max_cents) ? `Recovery available: ${recoveryCandidate(r,test.max_cents).mark}` : r.mark}</td><td><strong>{r.status}</strong><small>{r.detail}</small></td></tr>)}</tbody></table></div>
       <label className="import-confirm"><input type="checkbox" disabled={busy} checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>I checked this export against {group.exam_year}, {test.phase}, Paper {test.paper}, maximum {test.max_cents / 100}.</label>
       <button className="primary-button" disabled={busy || !editable || !confirmed || !!targetErrors.length} onClick={stage}>{busy ? "Processing…" : "Import valid scores and save review rows"}</button></>}
     <h4>Pending review ({pending.length})</h4><p>Every pending row must be imported or explicitly dismissed before adding zeroes or closing this test.</p>
+    {pending.some(r=>String(r.raw.mark).includes("[Unsupported cell:")) && <p className="readonly-note">To recover earlier date-converted scores, choose the same .xlsx file again and confirm its date recovery preview. Matching pending rows will be updated; unknown students still need a stream.</p>}
     <div className="table-scroll import-preview"><table><thead><tr><th>File / row</th><th>Student</th><th>Original score</th><th>Issue</th><th>Action</th></tr></thead><tbody>{pending.map(r => <tr key={r.id}><td>{r.filename}<small>Row {r.row_number}</small></td><td>{r.raw.code}<small>{r.raw.name}</small></td><td>{r.raw.mark}</td><td>{r.message}</td><td><button className="secondary-button" disabled={!editable || busy || !!selected} onClick={() => setSelected(r)}>Review</button></td></tr>)}</tbody></table></div>
     {selected && <ReviewOnlineRow key={selected.id} row={selected} snapshot={snapshot} onClose={() => setSelected(null)} onSaved={async () => { setSelected(null); await refresh(); onChanged(); }}/>} 
     {!!batches.length && <details><summary>Import history ({batches.length} files)</summary>{batches.map(b => <div key={b.id} className="import-history"><strong>{b.filename}</strong><small>{new Date(b.created_at).toLocaleString("en-GB", { timeZone: "Asia/Colombo" })}</small><p>{["Imported","Skipped","Pending","Dismissed"].map(status => `${b.rows.filter(r => r.status === status).length} ${status.toLowerCase()}`).join(" · ")}</p>

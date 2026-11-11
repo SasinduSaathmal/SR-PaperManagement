@@ -2826,3 +2826,6 @@ html[data-theme="dark"] .completion-panel .completion-summary { color: #8dbbff; 
 .reports-workspace .shared-form-actions { flex-wrap:wrap; }
 .shared-batch-list li { flex-wrap:wrap; gap:12px; }
 .shared-batch-list small { display:block; margin-top:4px; font-size:12px; }
+.deployment-notice { position:sticky; top:0; z-index:1000; padding:12px 24px; background:#fff8e6; color:#24334a; border-bottom:2px solid #d49b31; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.deployment-notice p { flex:1; min-width:240px; margin:0; }
+html[data-theme="dark"] .deployment-notice { background:#263144; color:#eef3fa; }

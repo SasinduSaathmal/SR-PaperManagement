@@ -1,12 +1,12 @@
 import { officialCode } from "./studentImport.js";
 import { parseMark } from "./domain.js";
 import { readStudentFile } from "./workbooks.js";
+import { parseOnlineHTML as parseHTML } from "./onlineHTML.js";
 
-const text = value => String(value ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+const text = value => String(value && typeof value === "object" && value.text ? value.text : value ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 const normal = value => text(value).toLowerCase();
 export async function parseOnlineHTML(html) {
-  const module = await import("./onlineHTML.js");
-  return module.parseOnlineHTML(html);
+  return parseHTML(html);
 }
 export async function readOnlineFile(file) {
   if (file.size > 5 * 1024 * 1024) throw Error("Choose a file smaller than 5 MB.");
@@ -15,7 +15,7 @@ export async function readOnlineFile(file) {
   // The original .xls exports are HTML; never interpret their scores as dates.
   if (/<table[\s>]|<frameset[\s>]|Excel Workbook Frameset/i.test(raw)) return parseOnlineHTML(raw);
   if (/\.xls$/i.test(file.name)) throw Error("This .xls is not the supported HTML-table export. Use the original downloaded export, or save a genuine workbook as .xlsx.");
-  const sheets = await readStudentFile(file);
+  const sheets = await readStudentFile(file,{preserveDates:true});
   if (sheets.length !== 1) throw Error("For online imports, upload one worksheet at a time.");
   return { heading: file.name.replace(/\.(xlsx|csv)$/i, ""), matrix: sheets[0].rows };
 }
@@ -25,9 +25,12 @@ export function onlineRows(matrix) {
   const find = names => headers.findIndex(h => names.includes(h));
   const columns = { code: find(["student code", "student id", "official id"]), name: find(["student name", "name"]), school: find(["student school", "school"]), mark: find(["student mark", "marks", "score"]), stream: find(["stream"]) };
   if (columns.code < 0 || columns.mark < 0) throw Error("Student Code and Student Mark columns are required.");
-  return matrix.slice(1).filter(cells => cells.some(c => text(c))).map((cells, index) => ({
-    row_number: index + 2, code: text(cells[columns.code]), name: text(cells[columns.name]), school: text(cells[columns.school]), mark: text(cells[columns.mark]), stream: text(cells[columns.stream]),
-  }));
+  return matrix.slice(1).filter(cells => cells.some(c => text(c))).map((cells, index) => {
+    const cell=cells[columns.mark];
+    return {row_number:index+2,code:text(cells[columns.code]),name:text(cells[columns.name]),school:text(cells[columns.school]),
+      mark:cell&&typeof cell==="object"?cell.text:text(cell),stream:text(cells[columns.stream]),
+      ...(cell?.kind==="excel-date"?{mark_date:cell}:{}),};
+  });
 }
 export function checkOnlineTarget(heading, rows, test, year) {
   const errors = [];

@@ -15,13 +15,13 @@
     "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",
-    "linkedom": "^0.18.15",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.68.0",
     "@electric-sql/pglite": "^0.5.16",
+    "linkedom": "^0.18.15",
     "vite": "^7.0.0",
     "wrangler": "^4.160.0"
   }
