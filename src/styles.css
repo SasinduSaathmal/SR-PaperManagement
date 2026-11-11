@@ -2838,3 +2838,4 @@ html[data-theme="dark"] .deployment-notice { background:#263144; color:#eef3fa; 
 .trial-cleanup-counts dd { margin:6px 0 0; font-size:22px; font-weight:700; }
 .trial-cleanup-phrase { display:flex; flex-direction:column; gap:8px; max-width:460px; margin:16px 0; }
 .trial-cleanup-phrase input { padding:12px; border:1px solid #8191a4; border-radius:8px; }
+.student-row-actions { flex-wrap:wrap; gap:8px 12px; min-width:160px; }

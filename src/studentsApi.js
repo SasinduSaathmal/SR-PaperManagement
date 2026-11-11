@@ -28,7 +28,7 @@ export const loadSchools = (client, signal) => readPages(
 );
 export const loadEnrolments = (client, groupId, signal) => readPages(
   () => client.from("enrolments")
-    .select("id, student_code, stream, is_active, version, student:students(id, name, version), school:schools(id, name)")
+    .select("id, student_code, stream, is_active, version, student:students(id, name, version, enrolments(student_code, aliases:student_id_aliases(student_code))), aliases:student_id_aliases(student_code), school:schools(id, name)")
     .eq("group_id", groupId).order("id"), signal,
 );
 
@@ -49,9 +49,18 @@ export function searchDirectory(rows, query, year) {
   const full = text.match(/^SC\/(\d{4})\/(\d+)$/i);
   if (full) {
     const code = `SC/${full[1]}/${canonicalNumber(full[2])}`;
-    return rows.filter((row) => row.student_code === code);
+    return rows.filter((row) => identityCodes(row).includes(code));
   }
   const lower = text.toLowerCase();
-  return rows.filter((row) => [row.student?.name, row.school?.name, row.student_code]
+  return rows.filter((row) => [row.student?.name, row.school?.name, ...identityCodes(row)]
     .some((value) => value?.toLowerCase().includes(lower)));
+}
+
+
+export function identityCodes(row) {
+  return [...new Set([row.student_code,...(row.aliases||[]).map(a=>a.student_code),...(row.student?.enrolments||[]).flatMap(e=>[e.student_code,...(e.aliases||[]).map(a=>a.student_code)])])];
+}
+
+export function searchMarksStudents(students,query,year) {
+  return searchDirectory(students.map(s=>({record:s,student_code:s.student_code,school:{name:s.school},student:{name:s.name,enrolments:(s.linked_ids||[]).map(code=>({student_code:code}))}})),query,year).map(row=>row.record);
 }

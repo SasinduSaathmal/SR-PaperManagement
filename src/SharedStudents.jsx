@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient.js";
-import { callStudentAction, loadEnrolments, loadGroups, loadSchools, searchDirectory } from "./studentsApi.js";
+import { callStudentAction, loadEnrolments, loadGroups, loadSchools, searchDirectory, identityCodes } from "./studentsApi.js";
+import StudentIdentity from "./StudentIdentity.jsx";
 import BulkStudentImport from "./BulkStudentImport.jsx";
 
 export default function SharedStudents({ profile }) {
@@ -19,6 +20,7 @@ export default function SharedStudents({ profile }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [identity,setIdentity] = useState(null);
   const [busy, setBusy] = useState(false);
   const [newYear, setNewYear] = useState("");
   const [showGroup, setShowGroup] = useState(false);
@@ -110,7 +112,7 @@ export default function SharedStudents({ profile }) {
     <section className="shared-directory">
       <div className="shared-toolbar">
         <label>Exam-year group
-          <select aria-label="Exam-year group" value={groupId} disabled={loading || busy || showAdd || !!editing || showImport} onChange={(event) => {
+          <select aria-label="Exam-year group" value={groupId} disabled={loading || busy || showAdd || !!editing || showImport || !!identity} onChange={(event) => {
             setShowImport(false); setGroupId(event.target.value); setQuery(""); setNotice("");
           }}>
             {!groups.length && <option value="">No groups available</option>}
@@ -119,9 +121,9 @@ export default function SharedStudents({ profile }) {
             </option>)}
           </select>
         </label>
-        <button className="secondary-button" disabled={loading || busy || showAdd || !!editing || showImport} onClick={() => setRefresh((value) => value + 1)}>Refresh</button>
-        {admin && <button className="secondary-button" disabled={busy || showAdd || !!editing || showImport} onClick={() => setShowGroup((value) => !value)}>Add exam group</button>}
-        {admin && group && <button className="text-button" disabled={loading || busy || showAdd || !!editing || showImport} onClick={toggleArchive}>
+        <button className="secondary-button" disabled={loading || busy || showAdd || !!editing || showImport || !!identity} onClick={() => setRefresh((value) => value + 1)}>Refresh</button>
+        {admin && <button className="secondary-button" disabled={busy || showAdd || !!editing || showImport || !!identity} onClick={() => setShowGroup((value) => !value)}>Add exam group</button>}
+        {admin && group && <button className="text-button" disabled={loading || busy || showAdd || !!editing || showImport || !!identity} onClick={toggleArchive}>
           {group.is_archived ? "Restore group" : "Archive group"}
         </button>}
       </div>
@@ -135,6 +137,7 @@ export default function SharedStudents({ profile }) {
       {group?.is_archived && <p className="alert">This group is archived. Everyone can view its student records; an admin must restore it before making changes.</p>}
       {admin && group && !group.is_archived && showImport && <BulkStudentImport key={group.id} group={group}
         onClose={() => setShowImport(false)} onSaved={() => setRefresh(value => value + 1)} />}
+      {identity && group && <StudentIdentity key={identity.record?.id || group.id} {...identity} group={group} schools={schools} onClose={()=>setIdentity(null)} onSaved={code=>{setIdentity(null);setNotice(`Student identity saved: ${code}`);setQuery("");setRefresh(v=>v+1);}}/>}
       {(showAdd || editing) && group && <StudentEntry key={editing?.id || group.id} group={group} schools={schools} record={editing}
         onClose={() => { setShowAdd(false); setEditing(null); }}
         onSaved={(code) => {
@@ -144,8 +147,9 @@ export default function SharedStudents({ profile }) {
       <section className="panel">
         <div className="panel-title-row">
           <div><h3>Shared student directory</h3><p>Saved in Supabase and available to all active markers.</p></div>
-          {admin && <button className="secondary-button" disabled={loading || busy || !group || group.is_archived || showAdd || !!editing || showImport} onClick={() => setShowImport(true)}>Import students</button>}
-          <button className="primary-button" disabled={loading || busy || !group || group.is_archived || showAdd || !!editing || showImport} onClick={() => { setShowAdd(true); setNotice(""); }}>Add student</button>
+          {admin && <button className="secondary-button" disabled={loading || busy || !group || group.is_archived || showAdd || !!editing || showImport || !!identity} onClick={() => setShowImport(true)}>Import students</button>}
+          {admin && <button className="secondary-button" disabled={loading || busy || !group || group.is_archived || showAdd || !!editing || showImport || !!identity} onClick={()=>setIdentity({mode:'link',record:null})}>Add returning student</button>}
+          <button className="primary-button" disabled={loading || busy || !group || group.is_archived || showAdd || !!editing || showImport || !!identity} onClick={() => { setShowAdd(true); setNotice(""); }}>Add student</button>
         </div>
         <div className="directory-search search-box">
           <input aria-label="Search shared student directory" placeholder="Name, school, full ID, or official number" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -155,11 +159,13 @@ export default function SharedStudents({ profile }) {
           <p className="shared-count">{matches.length} {matches.length === 1 ? "student" : "students"} found</p>
           <div className="table-scroll"><table><thead><tr><th>Name</th><th>Student ID</th><th>School</th><th>Stream</th><th>Status</th>{admin && <th>Actions</th>}</tr></thead>
             <tbody>{matches.map((row) => <tr key={row.id}>
-              <td><strong>{row.student?.name}</strong></td><td className="mono">{row.student_code}</td>
+              <td><strong>{row.student?.name}</strong></td><td className="mono">{row.student_code}{identityCodes(row).filter(c=>c!==row.student_code).map(c=><small key={c}>Linked ID: {c}</small>)}</td>
               <td>{row.school?.name}</td><td>{row.stream}</td><td>{row.is_active ? "Active" : "Inactive"}</td>
               {admin && <td><div className="student-row-actions">
-                <button className="text-button" aria-label={`Edit ${row.student?.name}`} disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport} onClick={() => { setEditing(row); setNotice(""); }}>Edit</button>
-                <button className="text-button" aria-label={`${row.is_active ? "Deactivate" : "Reactivate"} ${row.student?.name}`} disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport} onClick={() => changeStatus(row)}>{row.is_active ? "Deactivate" : "Reactivate"}</button>
+                <button className="text-button" aria-label={`Edit ${row.student?.name}`} disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport || !!identity} onClick={() => { setEditing(row); setNotice(""); }}>Edit</button>
+                {row.student_code.startsWith('TEMP/') && <button className="text-button" disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport || !!identity} onClick={()=>setIdentity({mode:'replace',record:row})}>Replace temporary ID</button>}
+                <button className="text-button" disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport || !!identity} onClick={()=>setIdentity({mode:'link',record:row})}>Link earlier enrolment</button>
+                <button className="text-button" aria-label={`${row.is_active ? "Deactivate" : "Reactivate"} ${row.student?.name}`} disabled={busy || loading || group?.is_archived || showAdd || !!editing || showImport || !!identity} onClick={() => changeStatus(row)}>{row.is_active ? "Deactivate" : "Reactivate"}</button>
               </div></td>}
             </tr>)}</tbody></table></div>
           {!matches.length && <p className="shared-empty">{rows.length ? "No matching students." : "No students in this group yet."}</p>}
@@ -209,7 +215,7 @@ function StudentEntry({ group, schools, record, onClose, onSaved }) {
         <option value="">Choose stream</option><option value="Maths">Maths</option><option value="Bio">Bio</option>
       </select></label>
       <label>{record ? "Student ID" : "Official ID or number (optional)"}<input readOnly={!!record} maxLength={100} placeholder={`e.g. 6900 or SC/${group.exam_year}/6900`} value={values.officialId} disabled={saving} onChange={(event) => set("officialId", event.target.value)} />
-        <small>{record ? "ID replacement and linking returning students will be added in a later step." : "Leave blank to generate a temporary ID."}</small>
+        <small>{record ? "Use the directory actions to replace a temporary ID or link an earlier enrolment." : "Leave blank to generate a temporary ID."}</small>
       </label>
     </div>
     {error && <p className="field-error" role="alert">{error}</p>}
