@@ -1,8 +1,10 @@
 import { parseCSV } from "./studentImport.js";
+import { dateCellValue } from "./dateMarkRecovery.js";
+import { moduleLoadMessage } from "./moduleLoading.js";
 
 export async function excel() {
-  const module = await import("exceljs");
-  return module.default || module;
+  try { const module = await import("exceljs"); return module.default || module; }
+  catch(error) { throw Error(moduleLoadMessage(error)); }
 }
 export function saveDownload(bytes, name, type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
   const url = URL.createObjectURL(new Blob([bytes], { type }));
@@ -54,7 +56,7 @@ export async function downloadStudentTemplate() {
   }
   saveDownload(await workbook.xlsx.writeBuffer(), "Student import template.xlsx");
 }
-export async function readStudentFile(file) {
+export async function readStudentFile(file,{preserveDates=false}={}) {
   if (file.size > 5 * 1024 * 1024) throw Error("Choose a file smaller than 5 MB.");
   if (/\.csv$/i.test(file.name)) {
     return [{ name: file.name, rows: parseCSV(await file.text()) }];
@@ -69,7 +71,8 @@ export async function readStudentFile(file) {
       const values = [];
       for (let col = 1; col <= sheet.columnCount; col++) {
         const cell = row.getCell(col), value = cell.value;
-        if (value instanceof Date || (value && typeof value === "object" && !(value.richText || value.hyperlink))) values.push("[Unsupported cell: replace with plain text]");
+        if (preserveDates && value instanceof Date) values.push(dateCellValue(value,cell.numFmt));
+        else if (value instanceof Date || (value && typeof value === "object" && !(value.richText || value.hyperlink))) values.push("[Unsupported cell: replace with plain text]");
         else values.push(cell.text);
       }
       rows.push(values);

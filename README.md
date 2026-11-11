@@ -1,5 +1,7 @@
 # Physics - Samitha Rathnayake
 
+Online import fixes: see [Excel date recovery and deployment loading](docs/ONLINE_DATE_RECOVERY.md). Apply `supabase/008_online_date_recovery.sql` before deploying this update.
+
 Marking fixes: see [zero-fill attribution, empty batches and Excel index files](docs/MARKING_BUG_FIXES.md). Apply `supabase/007_zero_fill_empty_batches.sql` before deploying these fixes.
 
 Online imports and immutable PDF/Excel report versions: see [setup and usage](docs/ONLINE_IMPORT_REPORTS.md). Apply `supabase/006_online_import_reports.sql` before deploying that update.
