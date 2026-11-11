@@ -1,3 +1,4 @@
+import BrandMark from "./BrandMark.jsx";
 import React, { useEffect, useState } from "react";
 import PasswordAccess from "./PasswordAccess.jsx";
 import { supabase } from "./lib/supabaseClient.js";
@@ -104,7 +105,7 @@ function AccountGate({ children, onPassword, onReset, notice }) {
       <div className="auth-page">
         <section className="auth-card" aria-busy={!current}>
           <div className="auth-theme-control"><ThemeToggle /></div>
-          <h1>Physics</h1>
+          <BrandMark className="auth-brand-mark"/><h1>Physics</h1>
           <p>Samitha Rathnayake</p>
           <h2>{current?.error ? "Account unavailable" : "Loading your account..."}</h2>
           {current?.error && <p className="field-error" role="alert">{current.error}</p>}
@@ -141,7 +142,7 @@ function AccountGate({ children, onPassword, onReset, notice }) {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleLogin}>
         <div className="auth-theme-control"><ThemeToggle /></div>
-        <h1>Physics</h1>
+        <BrandMark className="auth-brand-mark"/><h1>Physics</h1>
         <p>Samitha Rathnayake</p>
         <h2>Sign in</h2>
         <label>Email

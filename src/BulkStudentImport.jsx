@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import FileUploadField from "./FileUploadField.jsx";
 import { supabase } from "./lib/supabaseClient.js";
 import { loadEnrolments } from "./studentsApi.js";
 import { fields, guessColumns, previewStudents } from "./studentImport.js";
@@ -47,15 +48,15 @@ export default function BulkStudentImport({ group, onClose, onSaved }) {
     } catch (e) { setError(controller.signal.aborted ? "Import timed out. Retry this same preview safely; it will not duplicate a completed import." : e.message); }
     finally { clearTimeout(timer); setBusy(false); }
   }
-  return <section className="panel student-import" aria-busy={busy}>
+  return <section className="panel workspace-panel student-import" aria-busy={busy}>
     <div className="panel-title-row"><h3>Import students · {group.exam_year}</h3><button className="text-button" disabled={busy} onClick={onClose}>Close import</button></div>
     <p>Upload .xlsx or UTF-8 CSV, with column headings in the first row. Name, school and Maths/Bio stream are required. Leave unknown official IDs blank for temporary IDs. Up to 1000 students per import.</p>
-    <div className="shared-form-actions"><button className="secondary-button" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await downloadStudentTemplate(); } catch(e) { setError(e.message); } finally { setBusy(false); } }}>Download template</button>
-      <label>Student file<input type="file" accept=".xlsx,.csv" disabled={busy} onChange={e => { selectFile(e.target.files[0]); e.target.value = ""; }}/></label></div>
+    <div className="import-upload-row"><button className="secondary-button" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await downloadStudentTemplate(); } catch(e) { setError(e.message); } finally { setBusy(false); } }}>Download template</button>
+      <FileUploadField label="Student file" accept=".xlsx,.csv" disabled={busy} hint="Excel workbook or UTF-8 CSV · Up to 5 MB" onChange={e => { selectFile(e.target.files[0]); e.target.value = ""; }}/></div>
     {error && <p className="alert" role="alert">{error}</p>}
     {result && <p className="notice" role="status">Imported {result.added} students; {result.skipped} already present at save time. {preview.rows.length - valid.length} preview rows were excluded. Existing records were preserved.</p>}
     {sheets.length > 0 && !result && <>
-      <label>Worksheet<select disabled={busy} value={sheetIndex} onChange={e => { const i = Number(e.target.value); setSheetIndex(i); setMapping(guessColumns(sheets[i].rows[0])); receipt.current = null; }}>{sheets.map((sheet, i) => <option value={i} key={i}>{sheet.name}</option>)}</select></label>
+      <label className="form-field">Worksheet<select disabled={busy} value={sheetIndex} onChange={e => { const i = Number(e.target.value); setSheetIndex(i); setMapping(guessColumns(sheets[i].rows[0])); receipt.current = null; }}>{sheets.map((sheet, i) => <option value={i} key={i}>{sheet.name}</option>)}</select></label>
       <div className="shared-fields">{Object.entries(fields).map(([key, label]) => <label key={key}>{label}<select disabled={busy} value={mapping[key] ?? -1} onChange={e => { setMapping(p => ({ ...p, [key]: Number(e.target.value) })); receipt.current = null; }}><option value={-1}>{key === "officialId" ? "No ID column" : "Select a column"}</option>{headers.map((h, i) => <option key={i} value={i}>{i + 1}: {h || "(blank header)"}</option>)}</select></label>)}</div>
       {!mappingReady && <p className="field-help">Select the name, school and stream columns to preview.</p>}
       {preview.error && <p className="alert" role="alert">{preview.error}</p>}

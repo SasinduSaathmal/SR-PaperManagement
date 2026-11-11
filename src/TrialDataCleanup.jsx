@@ -30,7 +30,7 @@ export default function TrialDataCleanup({group,profileId,tests,onCleared}) {
     }catch(e){setError(e.message);}finally{setBusy(false);}
   }
   const canClear=preview&&(preview.counts.tests>0||preview.counts.reports>0||preview.counts.students>0);
-  return <details className="panel trial-cleanup"><summary>Clear trial data · {group.exam_year}</summary>
+  return <details className="panel workspace-panel trial-cleanup"><summary>Clear trial data · {group.exam_year}</summary>
     <p>Before real marking begins, use this to permanently clear <strong>every test</strong> in the {group.exam_year} group, including marks, marker submissions, online imports, saved reports and their history. The app cannot distinguish trial records from real records.</p>
     <p>Student records are kept by default. Accounts, schools and other exam-year groups are kept. Download anything you want to keep before continuing. This cannot be undone.</p>
     {group.is_archived&&<p className="readonly-note">Restore this archived group in Students before clearing its trial data.</p>}

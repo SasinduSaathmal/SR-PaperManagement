@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import BrandMark from "./BrandMark.jsx";
 import SharedStudents from "./SharedStudents.jsx";
 import SharedMarks from "./SharedMarks.jsx";
 import { testCompletion, fillMissingWithZeroes, closeCompletedTest } from "./testCompletion.js";
@@ -116,39 +117,6 @@ function Icon({ name, size = 20, ...props }) {
       {...props}
     >
       {shapes[name] || shapes.test}
-    </svg>
-  );
-}
-function AtomLogo() {
-  return (
-    <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="3" fill="currentColor" />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="17"
-        ry="6.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="17"
-        ry="6.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        transform="rotate(60 20 20)"
-      />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="17"
-        ry="6.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        transform="rotate(120 20 20)"
-      />
     </svg>
   );
 }
@@ -575,9 +543,7 @@ function Workspace({ profile }) {
             setPage("home");
           }}
         >
-          <span className="brand-mark">
-            <AtomLogo />
-          </span>
+          <BrandMark />
           <span>
             <strong>Physics</strong>
             <small>Samitha Rathnayake</small>
@@ -1738,3 +1704,4 @@ function LearningNotes() {
     </div>
   );
 }
+

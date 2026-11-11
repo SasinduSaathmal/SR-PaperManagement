@@ -2839,3 +2839,71 @@ html[data-theme="dark"] .deployment-notice { background:#263144; color:#eef3fa; 
 .trial-cleanup-phrase { display:flex; flex-direction:column; gap:8px; max-width:460px; margin:16px 0; }
 .trial-cleanup-phrase input { padding:12px; border:1px solid #8191a4; border-radius:8px; }
 .student-row-actions { flex-wrap:wrap; gap:8px 12px; min-width:160px; }
+
+/* Consistent spacing and controls for the shared feature screens. */
+.brand-mark { display:block; flex-shrink:0; object-fit:contain; }
+.topbar-brand-mark { display:none; }
+.auth-brand-mark { display:block; width:48px; height:48px; margin:0 0 16px; }
+.workspace-panel { padding:24px; min-width:0; }
+.workspace-panel > .panel-title-row { padding:0; margin-bottom:16px; flex-wrap:wrap; align-items:flex-start; }
+.workspace-panel > :is(h2,h3), .workspace-panel > .panel-title-row h3 { font-size:16px; line-height:1.5; font-weight:700; }
+.workspace-panel > :is(h2,h3) { margin-bottom:10px; }
+.workspace-panel > h4 { font-size:14px; line-height:1.5; margin:24px 0 10px; }
+.workspace-panel > p:not(.alert):not(.notice):not(.readonly-note), .shared-student-form > p { font-size:13px; line-height:1.7; color:var(--muted); margin:0 0 16px; }
+.workspace-panel > summary { cursor:pointer; font-size:14px; line-height:1.6; font-weight:650; padding:0; }
+.workspace-panel > summary + p { margin-top:14px !important; }
+.workspace-panel .shared-toolbar { margin:16px 0; }
+.shared-marks-shell :where(.shared-toolbar,.shared-form-actions,.form-field) > label,
+.shared-marks-shell label.form-field { display:grid; gap:8px; min-width:0; font-size:13px; line-height:1.5; color:var(--dark); }
+.shared-marks-shell :where(.shared-fields,.shared-toolbar,.shared-form-actions,.form-field) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select) {
+  min-height:44px; width:100%; min-width:0; max-width:100%; border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; background:var(--paper); color:var(--dark); font-size:13px; line-height:1.5;
+}
+.shared-marks-shell .shared-form-actions { flex-wrap:wrap; gap:12px; }
+.shared-marks-shell .shared-fields > button { justify-self:start; align-self:end; }
+.shared-marks-shell input[type="checkbox"] { width:20px; height:20px; min-height:20px; padding:0; margin:1px 0 0; flex:0 0 20px; accent-color:var(--accent); }
+.shared-marks-shell .check-field, .shared-marks-shell .shared-fields .import-confirm { display:flex; flex-direction:row; gap:10px; align-items:flex-start; align-self:end; min-height:44px; padding:10px 0; margin:0; font-size:13px; line-height:1.6; }
+.shared-marks-shell .import-confirm { font-size:13px; line-height:1.6; }
+.shared-marks-shell .draft-review > .shared-fields { display:grid; align-items:stretch; gap:18px; padding:0; }
+.shared-marks-shell .draft-review > .shared-form-actions { flex-wrap:wrap; }
+.shared-marks-shell .draft-review h4 { font-size:14px; margin:0 0 16px; }
+.shared-marks-shell .draft-review .shared-fields > :is(.check-field,p,label:last-child) { grid-column:1/-1; }
+.shared-student-form > h3 { font-size:16px; line-height:1.5; margin-bottom:12px; }
+.participant-management { margin:24px 0; }
+.shared-marks-shell .draft-review { background:#fffaf0; color:var(--dark); border-top:3px solid #c49a44; padding:20px; }
+html[data-theme="dark"] .shared-marks-shell .draft-review { background:#1b293e; border-color:#665739; color:var(--dark); }
+.workspace-panel :is(.primary-button,.secondary-button,.text-button,.remove-test-button) { min-height:44px; }
+.import-preview th { background:var(--paper); }
+.report-test-list { border:1px solid var(--border); border-radius:8px; }
+.report-test-list legend { padding:0 6px; font-size:12px; color:var(--muted); }
+.report-test-list label { font-size:13px; line-height:1.6; color:var(--dark); }
+.workspace-panel .table-scroll { min-width:0; max-width:100%; }
+.workspace-panel .shared-form-actions:has(> label) { align-items:flex-end; }
+.workspace-panel .shared-form-actions > label { min-width:160px; }
+.upload-field { display:grid; gap:9px; width:100%; min-width:0; margin:20px 0; }
+.upload-label { font-size:13px; font-weight:650; color:var(--dark); }
+.upload-control { position:relative; display:flex; gap:16px; align-items:center; padding:12px; min-height:66px; border:1px dashed var(--border); border-radius:10px; background:var(--pale); cursor:pointer; }
+.upload-control:hover { border-color:var(--accent); }
+.upload-control:focus-within { outline:3px solid #6888b6; outline-offset:3px; }
+.upload-control input[type="file"] { position:absolute; inset:0; z-index:1; opacity:0; width:100%; height:100%; cursor:inherit; }
+.upload-action { display:inline-flex; align-items:center; gap:9px; flex-shrink:0; border:1px solid var(--border); border-radius:7px; background:var(--paper); padding:10px 13px; color:var(--dark); font-size:12px; font-weight:650; }
+.upload-name { min-width:0; font-size:13px; line-height:1.5; color:var(--muted); overflow-wrap:anywhere; }
+.upload-name.has-file { color:var(--dark); }
+.upload-field > small { font-size:12px; line-height:1.5; color:var(--muted); }
+.upload-field.is-disabled .upload-control { opacity:.6; cursor:not-allowed; }
+.import-upload-row { display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin:18px 0; }
+.import-upload-row > .upload-field { flex:1 1 300px; margin:0; }
+.import-upload-row > button { flex-shrink:0; }
+.account-invitations ul { margin:16px 0 0; padding:0; list-style:none; }
+.account-invitations li { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:13px; line-height:1.7; padding:12px 0; border-bottom:1px solid var(--border); overflow-wrap:anywhere; }
+@media(max-width:600px) {
+  .workspace-panel { padding:18px; }
+  .workspace-panel > .panel-title-row { gap:12px; }
+  .workspace-panel > .panel-title-row > button { width:100%; }
+  .shared-marks-shell .shared-fields > button { justify-self:stretch; width:100%; }
+  .workspace-panel .shared-form-actions > label { flex:1 1 100%; }
+  .upload-control { gap:10px; padding:10px; }
+  .upload-action { padding:10px; }
+}
+
+@media(max-width:760px) { .shared-marks-shell .topbar-brand-mark { display:block; width:32px; height:32px; flex-shrink:0; } }
