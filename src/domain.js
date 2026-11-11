@@ -37,7 +37,7 @@ export function searchStudents(students, query, year) {
         !student.id.startsWith("TEMP/") &&
         normaliseOfficialId(student.id, year) === canonical) ||
       student.name.toLowerCase().includes(text.toLowerCase()) ||
-      student.school.toLowerCase().includes(text.toLowerCase()) ||
+      (student.school ?? "").toLowerCase().includes(text.toLowerCase()) ||
       student.id.toLowerCase().includes(text.toLowerCase()),
   );
 }
@@ -228,3 +228,4 @@ export function buildRanking(state, testIds, stream) {
         : rows.findIndex((item) => item.total === row.total) + 1,
   }));
 }
+

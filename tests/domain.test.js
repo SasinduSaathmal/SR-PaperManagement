@@ -26,6 +26,7 @@ test("number-only lookup never falls back to a temporary ID", () => {
       active: true,
       id: "TEMP/SC/2027/000001",
       name: "Temporary Student",
+      school: "Test School",
     },
   ];
   assert.deepEqual(searchStudents(students, "1", 2027), []);
@@ -34,6 +35,20 @@ test("number-only lookup never falls back to a temporary ID", () => {
     "temp",
   );
   assert.equal(searchStudents(students, "temporary", 2027)[0].key, "temp");
+});
+test("student search handles missing schools without changing the records", () => {
+  for (const school of [undefined, null, ""]) {
+    const student = { key: "temp", year: 2027, active: true,
+      id: "TEMP/SC/2027/000001", name: "Temporary Student", school };
+    assert.deepEqual(searchStudents([student], student.id, 2027), [student]);
+    assert.deepEqual(searchStudents([student], "temporary", 2027), [student]);
+    assert.deepEqual(searchStudents([student], "unmatched school", 2027), []);
+    assert.deepEqual(searchStudents([student], "1", 2027), []);
+    assert.equal(student.school, school);
+  }
+  const student = { key: "official", year: 2027, active: true,
+    id: "SC/2027/123", name: "Student", school: "Test College" };
+  assert.deepEqual(searchStudents([student], "COLLEGE", 2027), [student]);
 });
 test("marks distinguish blank and zero, allow two decimals, and reject invalid precision/range", () => {
   assert.equal(parseMark("0", 150).cents, 0);
@@ -179,3 +194,4 @@ test("ranking adds raw marks, includes a recorded zero, excludes absences, and u
   assert.equal(rows.length, 3);
   assert.deepEqual(buildRanking(state, ["2027-p6", "2028-p5"], "Maths"), []);
 });
+
