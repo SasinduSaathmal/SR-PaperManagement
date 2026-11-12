@@ -27,13 +27,20 @@ function styleTable(sheet, headers, widths, headerRow = 1) {
   sheet.eachRow(row => { row.alignment = { vertical: "middle", wrapText: true }; });
 }
 export async function markerWorkbook(data) {
-  if (data.test.status !== "Closed") throw Error("Downloads are available only after closing the test.");
+  if (!["Open","Closed"].includes(data.test.status)) throw Error("Cancelled tests cannot be downloaded.");
+  if (data.test.status === "Open" && (!Number.isSafeInteger(data.submission?.revision) || data.submission.revision < 0 || !data.submission.submitted_at))
+    throw Error("Submit your latest batch before downloading marker data.");
   const ExcelJS = await excel(), workbook = new ExcelJS.Workbook();
   workbook.creator = "Physics - Samitha Rathnayake";
   const sheet = workbook.addWorksheet("Student marks");
   sheet.addRow([`${data.test.phase} · Paper ${data.test.paper} · ${data.marker.name}`]); sheet.mergeCells("A1:F1");
   sheet.getRow(1).font = { bold: true, size: 16 }; sheet.getRow(1).height = 32;
   sheet.addRow([`Exam year: ${data.exam_year} | Test date: ${data.test.test_date} | Maximum marks: ${data.test.max_cents / 100}`]); sheet.mergeCells("A2:F2"); sheet.getRow(2).height = 28;
+  if (data.submission) {
+    const submitted=new Date(data.submission.submitted_at).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
+    sheet.getCell("A2").value += ` | Submitted: ${submitted} (Sri Lanka) | Batch revision: ${data.submission.revision}`;
+    sheet.getRow(2).height=42;
+  }
   const headers = ["No.", "Student ID", "Student name", "School", "Stream", "Marks"];
   sheet.addRow(headers);
   data.rows.forEach((s, i) => sheet.addRow([i + 1, String(s.student_code), String(s.name), String(s.school), String(s.stream), s.cents / 100]));

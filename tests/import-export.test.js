@@ -34,7 +34,12 @@ test("Excel output round-trips as typed marks and literal text with exact filena
   assert.equal(sheet.getCell("C4").value, '=HYPERLINK("x")');
   assert.equal(sheet.getCell("B4").value, "SC/2028/0005");
   assert.equal(sheet.views[0].ySplit, 3);
-  await assert.rejects(() => markerWorkbook({ ...data, test: { ...data.test, status: "Open" } }), /closing/);
+  await assert.rejects(() => markerWorkbook({ ...data, test: { ...data.test, status: "Open" } }), /Submit your latest batch/);
+  const submitted={...data,test:{...data.test,status:"Open"},submission:{revision:2,submitted_at:"2026-11-12T05:00:00Z"}};
+  const open=await markerWorkbook(submitted);
+  assert.equal(open.worksheets[0].getCell("F5").value,125.25);
+  assert.match(open.worksheets[0].getCell("A2").value,/Submitted:.*Batch revision: 2/);
+  await assert.rejects(()=>markerWorkbook({...submitted,test:{...submitted.test,status:"Cancelled"}}),/Cancelled/);
 });
 test("Excel import reads multiple worksheets and rejects formula/date cells", async () => {
   const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet("Students");
