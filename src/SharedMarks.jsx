@@ -10,6 +10,7 @@ import ParticipantManagement from "./ParticipantManagement.jsx";
 import TrialDataCleanup from "./TrialDataCleanup.jsx";
 import { featureRequest } from "./featureApi.js";
 import { downloadMarker } from "./workbooks.js";
+import MarkerDownloads from "./MarkerDownloads.jsx";
 import { parseMark, formatMark } from "./domain.js";
 import { loadMarksIndex, marksRequest, loadSharedDrafts, persistSharedDrafts, participantStatus, completionOf } from "./sharedMarksApi.js";
 
@@ -281,12 +282,8 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
     <section className="test-strip"><div><strong>{test.phase} · Paper {test.paper}</strong><small>{test.test_date} · {formatMark(test.max_cents)} maximum marks</small></div><span className="badge">{test.status}</span><button className="secondary-button" disabled={saving || busy} onClick={refresh}>Refresh scores</button><span className="muted">Refreshes every 15 seconds</span></section>
     {error && <p className="alert" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     {(!open || !mine) && <p className="readonly-note">{!open ? "This test or exam group is read-only. Pending drafts are retained for recovery." : "You can view this test. Only selected participants enter new paper marks; admins can correct existing scores."}</p>}
-    {["Open","Closed"].includes(test.status) && <section className="panel marker-downloads"><h3>Download submitted student data</h3>
-      <p>Download after submitting your latest batch; the test can stay open. Each download is generated from the latest submitted paper entries, including zero marks and admin corrections. Automatically filled absent-student zeroes are excluded.</p>
-      <p className="field-help">After editing, save your changes and resubmit to enable the updated download. Files are generated in your browser and are not stored in the database. Previously downloaded copies remain on your device.</p>
-      <div className="completion-actions">{participants.filter(p => admin || p.marker_id === profile.id).map(p => <button key={p.marker_id} className="secondary-button" disabled={exporting || busy || saving || participantStatus(p) !== "Submitted" || (test.status === "Open" && p.marker_id === profile.id && (blocked || currentDrafts.length > 0))} onClick={() => exportMarker(p.marker_id)}>{exporting ? "Preparing…" : `Download ${p.name} .xlsx`}</button>)}</div>
-      <p className="field-help">Filename: Phase &lt;phase number&gt; Paper &lt;paper number&gt; &lt;marker’s name&gt;.xlsx</p>
-    </section>}
+    <MarkerDownloads test={test} participants={participants} profile={profile} busy={busy} saving={saving} exporting={exporting}
+      blocked={blocked} hasDrafts={currentDrafts.length>0} onDownload={exportMarker}/>
     {admin && <OnlineMarksImport snapshot={snapshot} onChanged={async () => { await refresh(); onChanged(); }}/> }
     <>
       <div className="stats-grid"><SharedStat label="Your entries" value={allScores.filter(s => s.marker_id === profile.id).length}/><SharedStat label="All entries" value={allScores.length}/><SharedStat label="Your batch" value={status}/><SharedStat label="Your sync status" value={saving ? "Saving…" : currentDrafts.length ? "Not synced" : "Up to date"}/></div>
