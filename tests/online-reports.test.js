@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { parseOnlineHTML, onlineRows, checkOnlineTarget, previewOnlineRows } from "../src/onlineImport.js";
-import { reportColumns, reportRows, rankingWorkbook, rankingPDF } from "../src/reportExport.js";
+import { reportColumns, reportRows, reportHeading, reportFilename, rankingWorkbook, rankingPDF } from "../src/reportExport.js";
 import ExcelJS from "exceljs";
 
 test("original HTML-table .xls scores stay text, all districts are included and test mismatches block import",async()=>{
@@ -25,7 +25,18 @@ test("report downloads preserve exact raw totals, missing vs zero, both streams 
  assert.deepEqual(reopened.worksheets.map(s=>s.name),["Maths detailed","Maths summary","Bio detailed","Bio summary"]);
  const s=reopened.worksheets[0];assert.equal(s.getCell("D7").value,40);assert.equal(s.getCell("E7").value,100);assert.equal(s.getCell("F7").value,140);assert.equal(s.getCell("D8").value,"—");assert.equal(s.getCell("E8").value,0);
  assert.deepEqual(reportRows(sampleReport,"Maths","summary",true)[0],["SC/2028/1",sampleReport.rows[0].name,sampleReport.rows[0].school,140,1]);
- const pdf=await rankingPDF(sampleReport);assert.ok(pdf.getNumberOfPages()>=4);assert.ok(pdf.output("arraybuffer").byteLength>1000);
+ const pdf=await rankingPDF(sampleReport,"Maths"),bio=await rankingPDF(sampleReport,"Bio");
+ assert.equal(pdf.getNumberOfPages(),2);assert.equal(bio.getNumberOfPages(),2);assert.ok(pdf.output("arraybuffer").byteLength>1000);
+ const text=pdf.output(),bioText=bio.output();
+ assert.ok(text.includes("Top 10 Maths"));assert.ok(!text.includes("Top 10 Bio"));assert.ok(text.includes("Second student"));
+ assert.ok(bioText.includes("Top 10 Bio"));assert.ok(!bioText.includes("Second student"));assert.ok(bioText.includes("No recorded participants in this stream."));
+ assert.ok(text.includes("Maximum total: 190"));assert.ok(text.includes("including ties"));assert.ok(text.includes("Version 2"));assert.ok(text.includes("By: Sasindu"));
+ assert.match(reportFilename(sampleReport,"pdf","Maths"),/ Maths v2\.pdf$/);assert.match(reportFilename(sampleReport,"pdf","Bio"),/ Bio v2\.pdf$/);
+ await assert.rejects(()=>rankingPDF(sampleReport),/Choose Maths or Bio/);
+ assert.deepEqual(reportHeading({...sampleReport,exam_year:2027,tests:[{phase:"Phase 3",paper:6}],top_n:10},"Maths"),["2027 Phase 3 Paper 6","Top 10 Maths"]);
+ assert.deepEqual(reportHeading({...sampleReport,top_n:0},"Bio"),["2028 Phase 1 Paper 1; Phase 1 Paper 2","Full list Bio"]);
+ assert.equal(s.getCell("A1").value,"2028 Phase 1 Paper 1; Phase 1 Paper 2\nTop 10 Maths");
+ assert.ok(s.getRow(1).height>=52);assert.match(s.getCell("A2").value,/including ties/);assert.match(s.getCell("A3").value,/Maximum total: 190/);assert.match(s.getCell("A5").value,/A dash means/);
 });
 
 test("online imports, closure and immutable reports work together with server-side access rules",async()=>{

@@ -58,7 +58,7 @@ test('current schema: two markers close two papers, export exact tied rankings, 
     assert.equal(excel.getWorksheet('Maths detailed').getCell('F7').value,130.25);
     assert.equal(excel.getWorksheet('Maths detailed').getCell('G8').value,1);
     assert.equal(excel.getWorksheet('Bio summary').getCell('D7').value,125);
-    assert.ok((await rankingPDF(report)).output('arraybuffer').byteLength>1000);
+    assert.ok((await rankingPDF(report,"Maths")).output('arraybuffer').byteLength>1000);
     await db.exec('reset role');
     const inventorySQL=await readFile(new URL('../supabase/checks/backup_inventory.sql',import.meta.url),'utf8');
     const inventory=async database=>JSON.parse((await database.exec(inventorySQL)).find(r=>r.rows?.[0]?.inventory).rows[0].inventory);
