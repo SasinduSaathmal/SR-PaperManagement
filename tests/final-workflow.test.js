@@ -28,7 +28,7 @@ test('current schema: two markers close two papers, export exact tied rankings, 
     await save(marker,t2,a,'100');await save(second,t2,b,'110');await save(second,t2,bio,'90');
     for (const t of [t1,t2]) {
       await uid(marker);
-      await assert.rejects(()=>rpc('app_export_marker_students($1,$2)',[t,marker]),/Close this test/);
+      await assert.rejects(()=>rpc('app_export_marker_students($1,$2)',[t,marker]),/not submitted their latest batch/);
       for (const person of [marker,second]) {
         await uid(person);const s=await rpc('app_get_test_workspace($1)',[t]);
         const p=s.participants.find(p=>p.marker_id===person);

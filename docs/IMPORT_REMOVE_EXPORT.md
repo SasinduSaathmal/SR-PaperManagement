@@ -20,12 +20,12 @@ In Test workspace, admins have Remove empty test in Complete this test. Removal 
 
 ## Download a marker's submitted students
 
-After closing the test, Download submitted student data appears in the workspace and rankings screens. Each marker can download their own batch; admins can download each participant's batch. Files contain No., Student ID, Student name, School, Stream and numeric Marks. Manually entered zeroes and the final values after admin corrections are included. Deleted entries and automatic absent-student zero fills are excluded. Empty submitted batches produce a workbook with headings and no student rows.
+With migration 014 installed, **Download submitted student data** is available as soon as a marker submits their latest batch, including while the test is still open. Each marker can download their own batch; admins can download each participant's submitted batch. After edits, save and submit again for the updated download. See [setup and current behavior](SUBMITTED_MARKER_DOWNLOADS.md).
 
-Filename: `Phase <phase number> Paper <paper number> <marker's name>.xlsx` (for example, `Phase 1 Paper 5 Sasindu.xlsx`). Characters invalid in Windows filenames are replaced with underscores. Reopened/cancelled tests cannot be downloaded until closed again. Archived closed tests remain downloadable. Downloads use the current saved student details and final saved marks, rather than a permanent historical report snapshot.
+Files contain No., Student ID, Student name, School, Stream and numeric Marks. Manually entered zeroes and saved admin corrections are included; deleted entries, online-only entries and automatic absent-student zero fills are excluded. Empty submitted batches produce headings and no student rows.
+
+Filename: `Phase <phase number> Paper <paper number> <marker's name>.xlsx`. Downloads are generated on demand in the browser; the database stores no file or export snapshot. Existing local copies are separate. Cancelled tests cannot be downloaded; open/reopened and closed tests require a current submitted batch. Archived tests remain downloadable. Before migration 014, the original 005 function restricts exports to closed tests.
 
 ## Validation
 
-`node --test tests/import-export.test.js tests/database.test.js` tests CSV quoting, canonical IDs and duplicate detection, typed XLSX round trips, permissions, atomic rollback, idempotent retries, empty-test removal and closed-test exports against embedded PostgreSQL (PGlite). `npm run build` checks the production bundle. Neither command changes the live Supabase database.
-
-The existing `number-only lookup never falls back to a temporary ID` test in `tests/domain.test.js` fails on the unchanged baseline: its fixture omits `school`, while the legacy search function accesses `student.school.toLowerCase()`. This update does not alter that legacy function or fixture.
+Run `npm test` for the current complete suite (46 tests passed with the submission-download update). The import/export and historical database fixtures cover CSV parsing, canonical IDs, duplicate detection, typed XLSX round trips, permissions, atomic rollback, idempotent retries and empty-test removal. `tests/submitted-downloads.test.js` exercises the current 014 function, open-test downloads, resubmission freshness, read-only exports and access restrictions. `npm run build` checks the production bundle. Neither command changes the live Supabase database.

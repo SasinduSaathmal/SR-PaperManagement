@@ -219,7 +219,7 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
       const participant = latest.participants.find(p => p.marker_id === profile.id);
       if (!participant) throw new Error("You are not a participating marker.");
       await request("app_submit_test_batch", { p_test_id: testId, p_expected_batch_revision: participant.batch_revision, p_request_id: uuid() });
-      setNotice("Your latest batch is submitted. Editing your own marks will require resubmission."); await refresh(); onChanged();
+      setNotice("Your latest batch is submitted and ready to download below. Editing your own marks will require resubmission."); await refresh(); onChanged();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function confirmEmptyBatch(participant) {
@@ -260,9 +260,14 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
   async function exportMarker(markerId) {
     setExporting(true); setError("");
     try {
+      if (markerId === profile.id && test.status === "Open") {
+        const stored=loadSharedDrafts(profile.id);
+        if (stored.error || blocked) throw Error(stored.error || "Resolve your local draft storage before downloading.");
+        if (currentDrafts.length || Object.values(stored.drafts).some(d=>d.testId===testId)) throw Error("Save or discard your drafts, then submit your latest batch before downloading.");
+      }
       const data = await request("app_export_marker_students", { p_test_id: testId, p_marker_id: markerId });
       await downloadMarker(data);
-    } catch(e) { setError(e.message.includes("004_shared_test_marks") ? "Run 005_import_remove_export.sql in Supabase to enable Excel downloads." : e.message); }
+    } catch(e) { setError(e.message.includes("Close this test before downloading") || e.message.includes("004_shared_test_marks") ? "Run 014_submitted_marker_downloads.sql in Supabase, then Refresh to enable downloads after submission." : e.message); }
     finally { setExporting(false); }
   }
   function input(student) {
@@ -276,9 +281,10 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
     <section className="test-strip"><div><strong>{test.phase} · Paper {test.paper}</strong><small>{test.test_date} · {formatMark(test.max_cents)} maximum marks</small></div><span className="badge">{test.status}</span><button className="secondary-button" disabled={saving || busy} onClick={refresh}>Refresh scores</button><span className="muted">Refreshes every 15 seconds</span></section>
     {error && <p className="alert" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     {(!open || !mine) && <p className="readonly-note">{!open ? "This test or exam group is read-only. Pending drafts are retained for recovery." : "You can view this test. Only selected participants enter new paper marks; admins can correct existing scores."}</p>}
-    {test.status === "Closed" && <section className="panel marker-downloads"><h3>Download submitted student data</h3>
-      <p>Final saved paper entries for each marker, including zero marks and admin corrections. Automatically filled absent-student zeroes are excluded.</p>
-      <div className="completion-actions">{participants.filter(p => admin || p.marker_id === profile.id).map(p => <button key={p.marker_id} className="secondary-button" disabled={exporting || busy || participantStatus(p) !== "Submitted"} onClick={() => exportMarker(p.marker_id)}>{exporting ? "Preparing…" : `Download ${p.name} .xlsx`}</button>)}</div>
+    {["Open","Closed"].includes(test.status) && <section className="panel marker-downloads"><h3>Download submitted student data</h3>
+      <p>Download after submitting your latest batch; the test can stay open. Each download is generated from the latest submitted paper entries, including zero marks and admin corrections. Automatically filled absent-student zeroes are excluded.</p>
+      <p className="field-help">After editing, save your changes and resubmit to enable the updated download. Files are generated in your browser and are not stored in the database. Previously downloaded copies remain on your device.</p>
+      <div className="completion-actions">{participants.filter(p => admin || p.marker_id === profile.id).map(p => <button key={p.marker_id} className="secondary-button" disabled={exporting || busy || saving || participantStatus(p) !== "Submitted" || (test.status === "Open" && p.marker_id === profile.id && (blocked || currentDrafts.length > 0))} onClick={() => exportMarker(p.marker_id)}>{exporting ? "Preparing…" : `Download ${p.name} .xlsx`}</button>)}</div>
       <p className="field-help">Filename: Phase &lt;phase number&gt; Paper &lt;paper number&gt; &lt;marker’s name&gt;.xlsx</p>
     </section>}
     {admin && <OnlineMarksImport snapshot={snapshot} onChanged={async () => { await refresh(); onChanged(); }}/> }

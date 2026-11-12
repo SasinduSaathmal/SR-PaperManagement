@@ -8,7 +8,7 @@ This procedure makes a Supabase logical backup and restores it into a **new, iso
 
 ## What has been verified
 
-The automated suite runs all migrations 001–013 in disposable PostgreSQL. Its final workflow uses two marker accounts, two closed papers, exact decimal scores, tied rankings, marker Excel files and final PDF/Excel reports. A PGlite data-directory round trip compares all 24 tracked tables and the application schema, then reads the final report and marker batch under the restored marker role.
+The automated suite runs all migrations 001–014 in disposable PostgreSQL. Its final workflow uses two marker accounts, two closed papers, exact decimal scores, tied rankings, marker Excel files and final PDF/Excel reports. A PGlite data-directory round trip compares all 24 tracked tables and the application schema, then reads the final report and marker batch under the restored marker role.
 
 Recovery checks also deliberately remove history, leak a write permission, and omit the custom Auth trigger. Each is detected. Reinstalling the Auth trigger retains the hardened invitation-only profile behavior.
 
