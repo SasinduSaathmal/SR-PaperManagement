@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import FileUploadField from "./FileUploadField.jsx";
 import { supabase } from "./lib/supabaseClient.js";
-import { loadEnrolments } from "./studentsApi.js";
+import { loadEnrolments, loadSchools } from "./studentsApi.js";
 import { fields, guessColumns, previewStudents } from "./studentImport.js";
 import { downloadStudentTemplate, readStudentFile } from "./workbooks.js";
 
@@ -11,27 +11,28 @@ export default function BulkStudentImport({ group, onClose, onSaved }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [ready, setReady] = useState(false);
   const [result, setResult] = useState(null);
   const receipt = useRef(null);
+  const [schools,setSchools]=useState([]);
   const matrix = sheets[sheetIndex]?.rows || [];
   const headers = matrix[0] || [];
   const mappingReady = ["name", "school", "stream"].every(k => mapping[k] >= 0);
   const preview = useMemo(() => {
-    try { return mappingReady ? { rows: previewStudents(matrix, mapping, existing, group.exam_year) } : { rows: [] }; }
+    try { return mappingReady ? { rows: previewStudents(matrix, mapping, existing, group.exam_year,schools) } : { rows: [] }; }
     catch (e) { return { rows: [], error: e.message }; }
-  }, [matrix, mapping, existing, group.exam_year, mappingReady]);
+  }, [matrix, mapping, existing, group.exam_year, mappingReady,schools]);
   const valid = preview.rows.filter(row => row.status === "New");
   const count = status => preview.rows.filter(row => row.status === status).length;
   async function loadExisting() {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
-    try { return await loadEnrolments(supabase, group.id, controller.signal); }
+    try { return await Promise.all([loadEnrolments(supabase, group.id, controller.signal),loadSchools(supabase,controller.signal)]); }
     finally { clearTimeout(timer); }
   }
   async function selectFile(file) {
     if (!file) return;
     setBusy(true); setError(""); setReady(false); setSheets([]); setResult(null); receipt.current = null;
     try {
-      const [nextSheets, records] = await Promise.all([readStudentFile(file), loadExisting()]);
+      const [nextSheets, [records,schoolOptions]] = await Promise.all([readStudentFile(file), loadExisting()]);
       if (!nextSheets.length || !nextSheets[0].rows.length) throw Error("This file contains no student sheets. Add column headings and student rows.");
-      setSheets(nextSheets); setSheetIndex(0); setMapping(guessColumns(nextSheets[0].rows[0])); setExisting(records); setReady(true);
+      setSheets(nextSheets); setSheetIndex(0); setMapping(guessColumns(nextSheets[0].rows[0])); setExisting(records); setSchools(schoolOptions); setReady(true);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function importRows() {

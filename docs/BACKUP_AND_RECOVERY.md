@@ -8,7 +8,7 @@ This procedure makes a Supabase logical backup and restores it into a **new, iso
 
 ## What has been verified
 
-The automated suite runs all migrations 001–012 in disposable PostgreSQL. Its final workflow uses two marker accounts, two closed papers, exact decimal scores, tied rankings, marker Excel files and final PDF/Excel reports. A PGlite data-directory round trip compares all 23 tracked tables and the application schema, then reads the final report and marker batch under the restored marker role.
+The automated suite runs all migrations 001–013 in disposable PostgreSQL. Its final workflow uses two marker accounts, two closed papers, exact decimal scores, tied rankings, marker Excel files and final PDF/Excel reports. A PGlite data-directory round trip compares all 24 tracked tables and the application schema, then reads the final report and marker batch under the restored marker role.
 
 Recovery checks also deliberately remove history, leak a write permission, and omit the custom Auth trigger. Each is detected. Reinstalling the Auth trigger retains the hardened invitation-only profile behavior.
 
@@ -143,7 +143,7 @@ Remove-Item Env:PGDATABASE
 Remove-Variable connection,target -ErrorAction SilentlyContinue
 ```
 
-The inventory covers all 21 app tables plus `auth.users` and `auth.identities`; digests detect same-count content changes as well as missing rows. Schema digests cover app columns, constraints, RLS policies, functions, triggers and client/service permissions. They are comparison aids, not an independent cryptographic proof of a backup's authenticity. The readiness script checks known security and structural requirements; it cannot validate every possible platform customization.
+The inventory covers all 22 app tables plus `auth.users` and `auth.identities`; digests detect same-count content changes as well as missing rows. Schema digests cover app columns, constraints, RLS policies, functions, triggers and client/service permissions. They are comparison aids, not an independent cryptographic proof of a backup's authenticity. The readiness script checks known security and structural requirements; it cannot validate every possible platform customization.
 
 ## Settings outside the database
 

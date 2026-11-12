@@ -146,7 +146,7 @@ export async function prepareNativeRestore(archive,pgBin) {
   await writeFile(outputFile('check-counts.sql'),countCheckSQL(counts));
   await copyFile(path.join(root,'supabase/restore/auth_profile_trigger.sql'),outputFile('auth-profile-trigger.sql'));
   await writeFile(outputFile('readiness.sql'),readinessWithoutTransaction(await readFile(path.join(root,'supabase/checks/restore_readiness.sql'),'utf8')));
-  await copyFile(path.join(root,'supabase/checks/backup_inventory.sql'),outputFile('backup_inventory.sql'));
+  await copyFile(path.join(root,plan.data.includes('public.school_name_aliases')?'supabase/checks/backup_inventory.sql':'supabase/checks/backup_inventory_legacy.sql'),outputFile('backup_inventory.sql'));
   await writeFile(outputFile('restore.sql'),`-- Execute with psql -X --single-transaction --set ON_ERROR_STOP=1 --file this-file.
 \\set ON_ERROR_STOP on
 \\ir guard.sql

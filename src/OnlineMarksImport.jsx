@@ -71,7 +71,7 @@ function ReviewOnlineRow({ row, snapshot, onClose, onSaved }) {
   const change = (k,v) => { setValues(s => ({ ...s, [k]:v })); request.current = null; };
   let canonical = "";
   try { canonical = officialCode(values.code,snapshot.group.exam_year); } catch {}
-  const student = snapshot.students.find(s => s.student_code === canonical);
+  const student = snapshot.students.find(s => (s.student_code === canonical || s.linked_ids?.includes(canonical)));
   const score = snapshot.scores.find(s => s.enrolment_id === student?.id && !s.is_deleted);
   if (!reviewedScore.current || reviewedScore.current.code !== canonical) reviewedScore.current = { code:canonical, version:score?.version ?? 0 };
   const expectedVersion = reviewedScore.current.version;

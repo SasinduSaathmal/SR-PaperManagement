@@ -52,7 +52,7 @@ export function previewOnlineRows(rows, snapshot) {
     const mark = score.length <= 2 ? parseMark(score[0].trim(), snapshot.test.max_cents / 100) : { error: "Invalid score" };
     let code = "", issue = "";
     try { code = officialCode(row.code, snapshot.group.exam_year); if (!code) issue = "Official ID is missing"; } catch(e) { issue = e.message; }
-    const student = snapshot.students.find(s => s.student_code === code);
+    const student = snapshot.students.find(s => (s.student_code === code || s.linked_ids?.includes(code)));
     const old = snapshot.scores.find(s => s.enrolment_id === student?.id && !s.is_deleted);
     let status = "Ready", detail = "Use existing database details";
     if (mark.cents === 0) { status = "Skipped"; detail = "Online zero: no score will be recorded"; }

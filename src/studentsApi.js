@@ -23,9 +23,13 @@ export async function readPages(makeQuery, signal) {
 export const loadGroups = (client, signal) => readPages(
   () => client.from("exam_groups").select("id, exam_year, is_archived").order("exam_year"), signal,
 );
-export const loadSchools = (client, signal) => readPages(
-  () => client.from("schools").select("id, name").order("id"), signal,
-);
+export async function loadSchools(client,signal) {
+  const {data,error}=await client.rpc('app_school_options',{}).abortSignal(signal);
+  if(!error)return data||[];
+  // Keep the existing directory available while migration 013 is installed.
+  if(!['PGRST202','42883'].includes(error.code))throw databaseError(error);
+  return readPages(()=>client.from('schools').select('id, name').order('id'),signal);
+}
 export const loadEnrolments = (client, groupId, signal) => readPages(
   () => client.from("enrolments")
     .select("id, student_code, stream, is_active, version, student:students(id, name, version, enrolments(student_code, aliases:student_id_aliases(student_code))), aliases:student_id_aliases(student_code), school:schools(id, name)")
@@ -52,7 +56,7 @@ export function searchDirectory(rows, query, year) {
     return rows.filter((row) => identityCodes(row).includes(code));
   }
   const lower = text.toLowerCase();
-  return rows.filter((row) => [row.student?.name, row.school?.name, ...identityCodes(row)]
+  return rows.filter((row) => [row.student?.name, row.school?.name, ...(row.school?.aliases||[]), ...identityCodes(row)]
     .some((value) => value?.toLowerCase().includes(lower)));
 }
 
