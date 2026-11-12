@@ -21,7 +21,7 @@ test('recovery checks detect lost records, leaked permissions and the omitted Au
     await rpc("app_save_test_score($1,$2,'12.25',0,$3)",[t,student,crypto.randomUUID()]);
     await db.exec(readiness);
     const original=await inventory(db);
-    assert.equal(Object.keys(original.tables).length,23);
+    assert.equal(Object.keys(original.tables).length,24);
     assert.equal(original.tables['public.test_scores'].rows,1);
     assert.deepEqual(compareInventories(original,await inventory(db)),[]);
     await db.exec('delete from test_mark_history');

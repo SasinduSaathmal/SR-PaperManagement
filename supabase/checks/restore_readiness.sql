@@ -10,7 +10,7 @@ begin
     'online_import_batches','online_import_rows','saved_reports','saved_report_tests',
     'online_file_import_receipts','trial_cleanup_runs','cleared_student_requests',
     'student_id_aliases','account_change_history','account_invitations'
-  ] loop
+  ] || case when to_regclass('public.school_name_aliases') is not null then array['school_name_aliases'] else array[]::text[] end loop
     relation := to_regclass('public.' || name);
     if relation is null then raise exception 'Missing application table: %', name; end if;
     if not (select relrowsecurity from pg_class where oid=relation) then
@@ -34,6 +34,19 @@ begin
   ] loop
     if to_regprocedure(name) is null then raise exception 'Missing application RPC: %',name; end if;
   end loop;
+  -- Older pre-013 archives remain valid; new installs must include these RPCs.
+  if to_regclass('public.school_name_aliases') is not null then
+    foreach name in array array[
+      'public.app_change_student_id(uuid,text,bigint,text,boolean,uuid)',
+      'public.app_school_options()',
+      'public.app_preview_school_merge(uuid[],uuid,text)',
+      'public.app_merge_schools(uuid[],uuid,text,text,text,text,uuid)',
+      'public.app_preview_student_removal(uuid,boolean)',
+      'public.app_remove_student(uuid,boolean,text,text,text,uuid)'
+    ] loop
+      if to_regprocedure(name) is null then raise exception 'Missing application RPC: %',name;end if;
+    end loop;
+  end if;
   if exists(select 1 from public.profiles p left join auth.users u on u.id=p.id where u.id is null) then
     raise exception 'A profile is missing its Auth user';
   end if;

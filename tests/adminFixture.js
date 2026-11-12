@@ -11,7 +11,7 @@ export async function fixture(){
    create table auth.users(id uuid primary key,email text unique,raw_user_meta_data jsonb default '{}',invited_at timestamptz,created_at timestamptz default now());
    insert into auth.users(id,email,raw_user_meta_data) values('${admin}','admin@school.test','{"display_name":"Admin"}'),('${otherAdmin}','other@school.test','{"display_name":"Other admin"}'),('${marker}','marker@school.test','{"display_name":"Marker"}'),('${second}','second@school.test','{"display_name":"Second"}');
    set test.uid='${admin}';set test.jwt_role='authenticated';`);
-  const files=['001_account_profiles.sql','002_shared_students.sql','003_student_management.sql','004_shared_test_marks.sql','005_import_remove_export.sql','006_online_import_reports.sql','007_zero_fill_empty_batches.sql','008_online_date_recovery.sql','009_trial_data_cleanup.sql','010_student_identity.sql','011_account_administration.sql','012_test_participants.sql'];
+  const files=['001_account_profiles.sql','002_shared_students.sql','003_student_management.sql','004_shared_test_marks.sql','005_import_remove_export.sql','006_online_import_reports.sql','007_zero_fill_empty_batches.sql','008_online_date_recovery.sql','009_trial_data_cleanup.sql','010_student_identity.sql','011_account_administration.sql','012_test_participants.sql','013_student_records_schools.sql'];
   for(const f of files){const sql=(await readFile(new URL(`../supabase/${f}`,import.meta.url),'utf8')).replaceAll('REPLACE_WITH_YOUR_LOGIN_EMAIL','admin@school.test');await db.exec(sql);}
   await db.query("update profiles set role='admin' where id=$1",[otherAdmin]);
   const rpc=async(sql,args=[])=>(await db.query(`select ${sql} as result`,args)).rows[0].result;

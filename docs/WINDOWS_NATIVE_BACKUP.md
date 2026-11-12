@@ -80,6 +80,8 @@ The preparer's selection, COPY counting, permission normalization, destination r
 
 After a successful restore, inspect the restored accounts, students, paper scores and saved reports in the test project's Table Editor. For a complete rehearsal, use an isolated review website with this test project's build/runtime variables and perform the browser checks in [the recovery review](BACKUP_AND_RECOVERY.md#final-review-before-production-use). Auth Site URL, redirects and email configuration must be set separately for that review environment. Keep production variables pointing to the original project.
 
+The preparer supports both pre-013 and current archives, choosing the matching inventory automatically. Current archives include `school_name_aliases`; pre-013 backups remain restorable. Use the inventory in the prepared folder for that archive.
+
 The optional `backup_inventory.sql` in the prepared folder produces a read-only inventory of application data/schema and users/identities. Compare it with a matching source checkpoint only if the source has not changed since the archive was created; later source edits or logins are not evidence of an archive failure.
 
 Record the archive hash, code revision, restore result and browser review result. Take a fresh archive before any real cleanup or database migration. Trial cleanup remains a separate, owner-directed operation after recovery verification.

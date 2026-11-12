@@ -1,3 +1,4 @@
+import {canonicalSchool} from "./schoolNames.js";
 export const IMPORT_LIMIT = 1000;
 export const fields = { name: "Student name", school: "School", stream: "Stream", officialId: "Official ID" };
 const clean = value => String(value ?? "").trim().replace(/\s+/g, " ");
@@ -39,16 +40,17 @@ export function guessColumns(headers) {
   const aliases = { name: ["name", "student name"], school: ["school", "school name"], stream: ["stream"], officialId: ["id", "student id", "student code", "official id", "official number"] };
   return Object.fromEntries(Object.entries(aliases).map(([key, options]) => [key, headers.findIndex(h => options.includes(fold(h)))]));
 }
-export function previewStudents(matrix, mapping, existing, year) {
+export function previewStudents(matrix, mapping, existing, year, schools=[]) {
   if (matrix.length - 1 > IMPORT_LIMIT) throw Error(`Import up to ${IMPORT_LIMIT} students at a time.`);
   if (matrix.some(row => row.length > 100)) throw Error("Use a file with up to 100 columns.");
   const seenCodes = new Set(), seenPeople = new Set();
   const signature = s => [fold(s.name), fold(s.school), s.stream].join("\u001f");
-  const byCode = new Map(existing.map(e => [e.student_code, e]));
+  const byCode = new Map(existing.flatMap(e => [e.student_code,...(e.aliases||[]).map(a=>a.student_code)].map(code=>[code,e])));
   const people = new Set(existing.map(e => signature({ name: e.student?.name, school: e.school?.name, stream: e.stream })));
   return matrix.slice(1).flatMap((cells, index) => {
     if (cells.every(c => !clean(c))) return [];
     const row = Object.fromEntries(Object.keys(fields).map(key => [key, clean(cells[mapping[key]])]));
+    row.school=canonicalSchool(row.school,schools);
     const errors = [];
     if (Object.values(row).some(value => value.includes("[Unsupported cell:"))) errors.push("Replace formula, date or unsupported cells with plain text");
     for (const key of ["name", "school"]) if (!row[key] || row[key].length > 200) errors.push(`${fields[key]} required (up to 200 characters)`);
