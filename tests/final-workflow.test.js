@@ -55,9 +55,9 @@ test('current schema: two markers close two papers, export exact tied rankings, 
     assert.deepEqual(report.rows.filter(r=>r.stream==='Maths').map(r=>[r.id,r.total_cents,r.rank]),[[a,13025,1],[b,13025,1]]);
     assert.deepEqual(report.rows.find(r=>r.stream==='Bio').scores,[3500,9000]);
     const excel=new ExcelJS.Workbook();await excel.xlsx.load(await (await rankingWorkbook(report)).xlsx.writeBuffer());
-    assert.equal(excel.getWorksheet('Maths detailed').getCell('F7').value,130.25);
-    assert.equal(excel.getWorksheet('Maths detailed').getCell('G8').value,1);
-    assert.equal(excel.getWorksheet('Bio summary').getCell('D7').value,125);
+    assert.equal(excel.getWorksheet('Maths detailed').getCell('F4').value,130.25);
+    assert.equal(excel.getWorksheet('Maths detailed').getCell('G5').value,1);
+    assert.equal(excel.getWorksheet('Bio summary').getCell('D4').value,125);
     assert.ok((await rankingPDF(report,"Maths")).output('arraybuffer').byteLength>1000);
     await db.exec('reset role');
     const inventorySQL=await readFile(new URL('../supabase/checks/backup_inventory.sql',import.meta.url),'utf8');
