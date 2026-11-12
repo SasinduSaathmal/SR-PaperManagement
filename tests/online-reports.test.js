@@ -23,20 +23,21 @@ export const sampleReport={id:"sample",title:"Physics - Samitha Rathnayake",exam
 test("report downloads preserve exact raw totals, missing vs zero, both streams and both layouts",async()=>{
  const wb=await rankingWorkbook(sampleReport),buffer=await wb.xlsx.writeBuffer(),reopened=new ExcelJS.Workbook();await reopened.xlsx.load(buffer);
  assert.deepEqual(reopened.worksheets.map(s=>s.name),["Maths detailed","Maths summary","Bio detailed","Bio summary"]);
- const s=reopened.worksheets[0];assert.equal(s.getCell("D7").value,40);assert.equal(s.getCell("E7").value,100);assert.equal(s.getCell("F7").value,140);assert.equal(s.getCell("D8").value,"—");assert.equal(s.getCell("E8").value,0);
+ const s=reopened.worksheets[0];assert.equal(s.getCell("D4").value,40);assert.equal(s.getCell("E4").value,100);assert.equal(s.getCell("F4").value,140);assert.equal(s.getCell("D5").value,"—");assert.equal(s.getCell("E5").value,0);
  assert.deepEqual(reportRows(sampleReport,"Maths","summary",true)[0],["SC/2028/1",sampleReport.rows[0].name,sampleReport.rows[0].school,140,1]);
  const pdf=await rankingPDF(sampleReport,"Maths"),bio=await rankingPDF(sampleReport,"Bio");
  assert.equal(pdf.getNumberOfPages(),2);assert.equal(bio.getNumberOfPages(),2);assert.ok(pdf.output("arraybuffer").byteLength>1000);
  const text=pdf.output(),bioText=bio.output();
  assert.ok(text.includes("Top 10 Maths"));assert.ok(!text.includes("Top 10 Bio"));assert.ok(text.includes("Second student"));
  assert.ok(bioText.includes("Top 10 Bio"));assert.ok(!bioText.includes("Second student"));assert.ok(bioText.includes("No recorded participants in this stream."));
- assert.ok(text.includes("Maximum total: 190"));assert.ok(text.includes("including ties"));assert.ok(text.includes("Version 2"));assert.ok(text.includes("By: Sasindu"));
+ assert.ok(text.includes("Physics - Samitha Rathnayaka"));assert.ok(bioText.includes("Physics - Samitha Rathnayaka"));assert.ok(text.includes("Version 2"));
+ for(const removed of ["Maximum total:","Generated:","including ties","By: Sasindu","A dash means","Summary"]){assert.ok(!text.includes(removed));assert.ok(!bioText.includes(removed));}
  assert.match(reportFilename(sampleReport,"pdf","Maths"),/ Maths v2\.pdf$/);assert.match(reportFilename(sampleReport,"pdf","Bio"),/ Bio v2\.pdf$/);
  await assert.rejects(()=>rankingPDF(sampleReport),/Choose Maths or Bio/);
  assert.deepEqual(reportHeading({...sampleReport,exam_year:2027,tests:[{phase:"Phase 3",paper:6}],top_n:10},"Maths"),["2027 Phase 3 Paper 6","Top 10 Maths"]);
  assert.deepEqual(reportHeading({...sampleReport,top_n:0},"Bio"),["2028 Phase 1 Paper 1; Phase 1 Paper 2","Full list Bio"]);
- assert.equal(s.getCell("A1").value,"2028 Phase 1 Paper 1; Phase 1 Paper 2\nTop 10 Maths");
- assert.ok(s.getRow(1).height>=52);assert.match(s.getCell("A2").value,/including ties/);assert.match(s.getCell("A3").value,/Maximum total: 190/);assert.match(s.getCell("A5").value,/A dash means/);
+ assert.equal(s.getCell("A1").value,"Physics - Samitha Rathnayaka");assert.equal(s.getCell("A2").value,"2028 Phase 1 Paper 1; Phase 1 Paper 2\nTop 10 Maths");
+ assert.ok(s.getRow(2).height>=52);assert.equal(s.views[0].ySplit,3);assert.match(s.autoFilter,/^A3:/);assert.equal(s.getCell("A3").value,"Student ID");
 });
 
 test("online imports, closure and immutable reports work together with server-side access rules",async()=>{
