@@ -10,9 +10,14 @@ export function reportRows(report, stream, layout, numeric = false) {
   return report.rows.filter(r => r.stream === stream).map(r => [...(report.include_ids ? [r.student_code] : []), r.name, r.school,
     ...(layout === "detailed" && report.tests.length > 1 ? r.scores.map(value) : []), value(r.total_cents), r.rank]);
 }
-export function reportFilename(report, extension) {
+export function reportFilename(report, extension, stream) {
+  if (extension==="pdf" && !["Maths","Bio"].includes(stream)) throw Error("Choose Maths or Bio for the PDF.");
   const safe = report.title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").replace(/[. ]+$/, "").slice(0,120);
-  return `${report.exam_year} ${safe} ${report.top_n ? `Top ${report.top_n}` : "Full list"} v${report.version}.${extension}`;
+  return `${report.exam_year} ${safe} ${report.top_n ? `Top ${report.top_n}` : "Full list"}${extension==="pdf"?` ${stream}`:""} v${report.version}.${extension}`;
+}
+export function reportHeading(report,stream) {
+  const papers=report.tests.map(t=>`Phase ${String(t.phase).replace(/^phase\s*/i,"").trim()} Paper ${t.paper}`).join("; ");
+  return [`${report.exam_year} ${papers}`,`${report.top_n ? `Top ${report.top_n}` : "Full list"} ${stream}`];
 }
 const context = (report,stream,layout) => `${report.exam_year} · ${stream} · ${layout === "detailed" ? "Detailed" : "Summary"} · ${report.top_n ? `Top ${report.top_n} (including ties)` : "Full list"} · ${report.is_final ? "Final" : "Provisional"} · Version ${report.version}`;
 const generated = report => new Date(report.created_at).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
@@ -23,8 +28,9 @@ export async function rankingWorkbook(report) {
   for (const stream of ["Maths","Bio"]) for (const layout of layoutsOf(report)) {
     const sheet = workbook.addWorksheet(`${stream} ${layout}`), headers = reportColumns(report,layout), count = headers.length;
     const tests = report.tests.map(t => `${t.phase}, Paper ${t.paper} (${formatMark(t.max_cents)} marks)`).join("; ");
-    for (const line of [report.title, context(report,stream,layout), `Maximum total: ${formatMark(report.max_cents)} | Generated: ${generated(report)} (Asia/Colombo) | By: ${report.creator}`, tests, "A dash means no recorded score and contributes zero. Recorded zeroes count as participation."]) { const row = sheet.addRow([line]); sheet.mergeCells(row.number,1,row.number,count); row.alignment={wrapText:true,vertical:"middle"}; row.height = Math.max(24,Math.ceil(line.length / Math.max(90,count*16))*14); }
-    sheet.getRow(1).font={bold:true,size:16}; sheet.getRow(1).height=Math.max(36,sheet.getRow(1).height);
+    const heading=reportHeading(report,stream).join("\n");
+    for (const line of [heading, context(report,stream,layout), `Maximum total: ${formatMark(report.max_cents)} | Generated: ${generated(report)} (Asia/Colombo) | By: ${report.creator}`, tests, "A dash means no recorded score and contributes zero. Recorded zeroes count as participation."]) { const row = sheet.addRow([line]); sheet.mergeCells(row.number,1,row.number,count); row.alignment={wrapText:true,vertical:"middle"}; row.height = Math.max(24,Math.ceil(line.length / Math.max(90,count*16))*14); }
+    sheet.getRow(1).font={bold:true,size:16}; sheet.getRow(1).height=12+heading.split("\n").reduce((lines,line)=>lines+Math.max(1,Math.ceil(line.length/Math.max(70,count*14))),0)*20;
     const header=sheet.addRow(headers); header.font={bold:true,color:{argb:"FFFFFFFF"}}; header.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF087E8B"}};header.height=44;header.alignment={wrapText:true,vertical:"middle"};
     reportRows(report,stream,layout,true).forEach(values => { const row=sheet.addRow(values);row.alignment={wrapText:true,vertical:"top"}; row.height=32; });
     headers.forEach((h,i)=>{const col=sheet.getColumn(i+1);col.width=h==="Student ID"?27:h==="Name"?34:h==="School"?44:h==="Rank"?9:16;if(!["Student ID","Name","School","Rank"].includes(h))col.numFmt="0.##";});
@@ -34,15 +40,16 @@ export async function rankingWorkbook(report) {
   return workbook;
 }
 
-export async function rankingPDF(report) {
+export async function rankingPDF(report,stream) {
+  if (!["Maths","Bio"].includes(stream)) throw Error("Choose Maths or Bio for the PDF.");
   const [{jsPDF},{autoTable}] = await Promise.all([import("jspdf"),import("jspdf-autotable")]);
   const pdf = new jsPDF({orientation:report.layout==="summary"?"portrait":"landscape",unit:"mm",format:"a4"});
   let first=true;
-  for (const stream of ["Maths","Bio"]) for (const layout of layoutsOf(report)) {
+  for (const layout of layoutsOf(report)) {
     if (!first) pdf.addPage(); first=false;
     const pageWidth=pdf.internal.pageSize.getWidth(), usable=pageWidth-24;
     pdf.setFont("helvetica","bold");pdf.setFontSize(14);
-    const titleLines=pdf.splitTextToSize(report.title,usable);
+    const titleLines=pdf.splitTextToSize(reportHeading(report,stream).join("\n"),usable);
     pdf.setFont("helvetica","normal");pdf.setFontSize(8);
     const metadata=pdf.splitTextToSize(context(report,stream,layout).replaceAll("·","|"),usable);
     const info=pdf.splitTextToSize(`Maximum total: ${formatMark(report.max_cents)} | Generated: ${generated(report)} (Asia/Colombo) | By: ${report.creator}`,usable);
@@ -60,7 +67,7 @@ export async function rankingPDF(report) {
   const count=pdf.getNumberOfPages();for(let p=1;p<=count;p++){pdf.setPage(p);pdf.setFontSize(8);pdf.setTextColor(90);pdf.text(`Version ${report.version} | ${report.is_final?"Final":"Provisional"} | Page ${p} of ${count}`,12,pdf.internal.pageSize.getHeight()-7);pdf.setTextColor(0);}
   return pdf;
 }
-export async function downloadReport(report, format) {
+export async function downloadReport(report, format, stream) {
   if(format==="xlsx")saveDownload(await (await rankingWorkbook(report)).xlsx.writeBuffer(),reportFilename(report,"xlsx"));
-  else saveDownload((await rankingPDF(report)).output("arraybuffer"),reportFilename(report,"pdf"),"application/pdf");
+  else saveDownload((await rankingPDF(report,stream)).output("arraybuffer"),reportFilename(report,"pdf",stream),"application/pdf");
 }
