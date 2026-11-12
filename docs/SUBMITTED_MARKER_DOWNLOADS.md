@@ -11,7 +11,7 @@ If 013 from the previous update has not been installed, run it first. Do not rer
 ## Marker flow
 
 - Enter and save the paper marks, then choose **Finish & Submit**.
-- In **Download submitted student data**, choose **Download <marker name> .xlsx**. The test may remain **Open** and other markers need not have submitted yet.
+- In **Download submitted entries**, choose **Download <marker name> .xlsx**. The test may remain **Open** and other markers need not have submitted yet.
 - After editing, save and submit again. The next download contains the updated batch. Until resubmission, the download is disabled and the server also rejects it. Pending local drafts are not included.
 - The same permission checks continue to apply: active markers download only their own batch; active admins can download each participant's latest submitted batch. Cancelled tests cannot be exported. Empty submitted batches produce a workbook with headings.
 
