@@ -32,8 +32,8 @@ test("report downloads preserve exact raw totals, missing vs zero, both streams 
  assert.ok(bioText.includes("Top 10 Bio"));assert.ok(!bioText.includes("Second student"));assert.ok(bioText.includes("No recorded participants in this stream."));
  assert.ok(text.includes("Physics - Samitha Rathnayaka"));assert.ok(bioText.includes("Physics - Samitha Rathnayaka"));assert.ok(text.includes("Version 2"));
  for(const removed of ["Maximum total:","Generated:","including ties","By: Sasindu","A dash means","Summary"]){assert.ok(!text.includes(removed));assert.ok(!bioText.includes(removed));}
- assert.match(reportFilename(sampleReport,"pdf","Maths"),/ Maths v2\.pdf$/);assert.match(reportFilename(sampleReport,"pdf","Bio"),/ Bio v2\.pdf$/);
- await assert.rejects(()=>rankingPDF(sampleReport),/Choose Maths or Bio/);
+ assert.match(reportFilename(sampleReport,"pdf","Maths"),/ Maths Matara\.pdf$/);assert.match(reportFilename(sampleReport,"pdf","Bio"),/ Bio Matara\.pdf$/);
+ await assert.rejects(()=>rankingPDF(sampleReport),/Choose Maths, Bio or All/);
  assert.deepEqual(reportHeading({...sampleReport,exam_year:2027,tests:[{phase:"Phase 3",paper:6}],top_n:10},"Maths"),["2027 Phase 3 Paper 6","Top 10 Maths"]);
  assert.deepEqual(reportHeading({...sampleReport,top_n:0},"Bio"),["2028 Phase 1 Paper 1; Phase 1 Paper 2","Full list Bio"]);
  assert.equal(s.getCell("A1").value,"Physics - Samitha Rathnayaka");assert.equal(s.getCell("A2").value,"2028 Phase 1 Paper 1; Phase 1 Paper 2\nTop 10 Maths");
