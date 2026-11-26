@@ -10,15 +10,17 @@ A shared React website for student records, paper marking, online marks imports 
 - Shared marks entry, account-specific local drafts, submissions/resubmissions, test closure/reopening/cancellation, participant changes and batch reassignment with original attribution.
 - Online HTML-table .xls, XLSX and CSV imports, confirmed Excel date recovery, pending-row review and conflict protection.
 - Raw-total rankings separated into Maths/Bio, Top N with ties, immutable provisional/final report versions, separate Maths/Bio and combined All PDF exports, Excel export and marker downloads immediately after submission.
+- Per-student marks history, optional linked exam years and admin-only score-change details.
+- Reviewed admin deletion of saved report snapshots from the database, with report version numbers preserved.
 - Admin account invitation, display names, roles, disable/reactivate controls and reviewed trial-data cleanup by exam year.
 
 All permissions are checked in the database/server. Passwords stay with Supabase Auth, and privileged API keys stay in the Worker. Public sign-up is not offered.
 
 ## Update the existing installation
 
-The latest update requires migration 014 after 001–013. Follow [downloads immediately after submission](docs/SUBMITTED_MARKER_DOWNLOADS.md). It adds no stored files or snapshots and changes no scores. The preceding [student removal, ID correction and school-name update](docs/STUDENT_RECORDS_SCHOOLS.md) requires 013 if it has not yet been installed. Earlier identity/account/participant setup is described [here](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md).
+The latest update requires migration 015 after 001–014. Follow [saved-report deletion and student marks history](docs/REPORT_DELETE_STUDENT_HISTORY.md). Installing it deletes no records and changes no scores. The preceding [downloads immediately after submission](docs/SUBMITTED_MARKER_DOWNLOADS.md) requires 014; [student removal, ID correction and school names](docs/STUDENT_RECORDS_SCHOOLS.md) requires 013. Earlier identity/account/participant setup is described [here](docs/IDENTITY_ACCOUNTS_PARTICIPANTS.md).
 
-For a new project, configure Supabase email/password authentication, create the owner account, edit the owner email in 001, then apply migrations 001–014 in order. Keep public sign-up disabled. Do not rerun the old 001 template over a current deployment: later migrations harden its profile trigger.
+For a new project, configure Supabase email/password authentication, create the owner account, edit the owner email in 001, then apply migrations 001–015 in order. Keep public sign-up disabled. Do not rerun the old 001 template over a current deployment: later migrations harden its profile trigger.
 
 ## Development and deployment
 
@@ -35,6 +37,7 @@ The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview 
 
 ## Feature guides
 
+- [Saved-report deletion and student marks history](docs/REPORT_DELETE_STUDENT_HISTORY.md)
 - [Downloads immediately after submitting a marker batch](docs/SUBMITTED_MARKER_DOWNLOADS.md)
 - [Student import, empty-test removal and marker Excel downloads](docs/IMPORT_REMOVE_EXPORT.md)
 - [Online imports, rankings and saved report versions](docs/ONLINE_IMPORT_REPORTS.md)
@@ -46,7 +49,7 @@ The connected Cloudflare build runs `npm run build` and Wrangler deploy/preview 
 - [Database backup, restore checks and final release review](docs/BACKUP_AND_RECOVERY.md)
 - [Windows native backup and restore without Docker/WSL](docs/WINDOWS_NATIVE_BACKUP.md)
 
-Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite (48 tests passed with the centered report layout update). The owner has verified invitation delivery and marker-side workflows on the configured deployment. On 11 November 2026, the owner also completed a native PostgreSQL 17.11 backup/restore into an isolated Supabase 17.11 project: archive readability, required tables, restored row counts, permissions/triggers, Table Editor review, restored admin sign-in and the test-workspace API all passed. See the [verified recovery run](docs/WINDOWS_NATIVE_BACKUP.md#verified-run-11-november-2026).
+Some older guides describe the test status at the time of their individual updates. Run `npm test` for the current complete suite (52 tests passed with the saved-report deletion and student history update). The owner has verified invitation delivery and marker-side workflows on the configured deployment. On 11 November 2026, the owner also completed a native PostgreSQL 17.11 backup/restore into an isolated Supabase 17.11 project: archive readability, required tables, restored row counts, permissions/triggers, Table Editor review, restored admin sign-in and the test-workspace API all passed. See the [verified recovery run](docs/WINDOWS_NATIVE_BACKUP.md#verified-run-11-november-2026).
 
 The isolated restored website's full browser marking/report-download workflow has not been repeated; the production marker checks and automated two-marker workflow are separate evidence. No production cleanup or restore is run by the automated tests.
 
