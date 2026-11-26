@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient.js";
 import { callStudentAction, loadEnrolments, loadGroups, loadSchools, searchDirectory, identityCodes } from "./studentsApi.js";
 import StudentIdentity from "./StudentIdentity.jsx";
+import StudentMarksHistory from "./StudentMarksHistory.jsx";
 import StudentRemoval from "./StudentRemoval.jsx";
 import SchoolManagement from "./SchoolManagement.jsx";
 import {canonicalSchool,schoolKey} from "./schoolNames.js";
@@ -24,13 +25,14 @@ export default function SharedStudents({ profile }) {
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [identity,setIdentity] = useState(null);
+  const [marksHistory,setMarksHistory]=useState(null);
   const [removing,setRemoving]=useState(null),[manageSchools,setManageSchools]=useState(false);
   const [busy, setBusy] = useState(false);
   const [newYear, setNewYear] = useState("");
   const [showGroup, setShowGroup] = useState(false);
   const group = groups.find((item) => item.id === groupId);
   const admin = profile.role === "admin";
-  const blocked=busy || showAdd || !!editing || showImport || !!identity || !!removing || manageSchools;
+  const blocked=busy || showAdd || !!editing || showImport || !!identity || !!removing || manageSchools || !!marksHistory;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -143,6 +145,7 @@ export default function SharedStudents({ profile }) {
       {group?.is_archived && <p className="alert">This group is archived. Everyone can view its student records; an admin must restore it before making changes.</p>}
       {admin && group && !group.is_archived && showImport && <BulkStudentImport key={group.id} group={group}
         onClose={() => setShowImport(false)} onSaved={() => setRefresh(value => value + 1)} />}
+      {marksHistory && group && <StudentMarksHistory key={marksHistory.id} record={marksHistory} group={group} onClose={()=>setMarksHistory(null)}/>}
       {manageSchools && <SchoolManagement schools={schools} onClose={()=>setManageSchools(false)} onSaved={result=>{setManageSchools(false);setNotice(`School names standardized as ${result.name}.`);setRefresh(v=>v+1);}}/>}
       {removing && group && <StudentRemoval record={removing} group={group} profileId={profile.id} onClose={()=>setRemoving(null)} onSaved={()=>{setRemoving(null);setQuery("");setNotice("Student and associated marks permanently removed.");setRefresh(v=>v+1);}}/>}
       {identity && group && <StudentIdentity key={identity.record?.id || group.id} {...identity} group={group} schools={schools} onClose={()=>setIdentity(null)} onSaved={code=>{setIdentity(null);setNotice(`Student identity saved: ${code}`);setQuery("");setRefresh(v=>v+1);}}/>}
@@ -168,17 +171,19 @@ export default function SharedStudents({ profile }) {
         {rowsError && <p className="alert" role="alert">{rowsError}</p>}
         {loading || rowsLoading || (groupId && rowsGroupId !== groupId && !rowsError) ? <p className="shared-empty" role="status">Loading student records...</p> : !error && !rowsError && <>
           <p className="shared-count">{matches.length} {matches.length === 1 ? "student" : "students"} found</p>
-          <div className="table-scroll"><table><thead><tr><th>Name</th><th>Student ID</th><th>School</th><th>Stream</th><th>Status</th>{admin && <th>Actions</th>}</tr></thead>
+          <div className="table-scroll"><table><thead><tr><th>Name</th><th>Student ID</th><th>School</th><th>Stream</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>{matches.map((row) => <tr key={row.id}>
               <td><strong>{row.student?.name}</strong></td><td className="mono">{row.student_code}{identityCodes(row).filter(c=>c!==row.student_code).map(c=><small key={c}>Linked ID: {c}</small>)}</td>
               <td>{row.school?.name}</td><td>{row.stream}</td><td>{row.is_active ? "Active" : "Inactive"}</td>
-              {admin && <td><div className="student-row-actions">
+              <td><div className="student-row-actions">
+                <button className="text-button" disabled={loading||blocked} aria-label={`Marks history for ${row.student?.name}`} onClick={()=>{setMarksHistory(row);setNotice("");}}>Marks history</button>
+                {admin&&<>
                 <button className="text-button" aria-label={`Edit ${row.student?.name}`} disabled={busy || loading || group?.is_archived || blocked} onClick={() => { setEditing(row); setNotice(""); }}>Edit</button>
                 <button className="text-button" disabled={busy || loading || group?.is_archived || blocked} onClick={()=>setIdentity({mode:'id',record:row})}>Edit ID</button>
                 <button className="text-button" disabled={busy || loading || group?.is_archived || blocked} onClick={()=>setIdentity({mode:'link',record:row})}>Link earlier enrolment</button>
                 <button className="text-button" aria-label={`${row.is_active ? "Deactivate" : "Reactivate"} ${row.student?.name}`} disabled={busy || loading || group?.is_archived || blocked} onClick={() => changeStatus(row)}>{row.is_active ? "Deactivate" : "Reactivate"}</button>
                 <button className="text-button student-remove-action" disabled={loading || blocked || group?.is_archived} onClick={()=>{setRemoving(row);setNotice("");}}>Remove permanently</button>
-              </div></td>}
+              </>}</div></td>
             </tr>)}</tbody></table></div>
           {!matches.length && <p className="shared-empty">{rows.length ? "No matching students." : "No students in this group yet."}</p>}
         </>}

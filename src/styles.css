@@ -2943,3 +2943,24 @@ html[data-theme="dark"] .shared-directory .student-remove-action { color:#ffb0ba
   .student-removal .trial-cleanup-counts { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .school-management .shared-form-actions > button,.student-removal .shared-form-actions > button { width:100%; white-space:normal; }
 }
+
+/* Saved-report deletion and student history share the workspace review layout. */
+.saved-report-deletion { margin:24px 0; scroll-margin-top:20px; }
+.student-marks-history { scroll-margin-top:20px; }
+.student-history-controls,.history-pagination { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; margin:16px 0; }
+.student-history-controls .import-confirm { margin:0; flex:1 1 280px; }
+.history-pagination { justify-content:flex-end; font-size:13px; color:var(--muted); }
+.history-count { padding-top:8px; }
+.student-score-changes { scroll-margin-top:20px; border-top:1px solid var(--border); margin-top:24px; padding-top:20px; }
+.student-score-changes > .panel-title-row { padding:0; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.student-score-changes h4 { font-size:14px; line-height:1.6; }
+.student-score-changes :is(p,td) { font-size:13px; line-height:1.7; }
+.student-marks-history table { min-width:780px; }
+.student-score-changes table { min-width:680px; }
+.saved-report-deletion .shared-form-actions { flex-wrap:wrap; }
+.shared-marks-shell .report-delete-action { color:#b42336; }
+html[data-theme="dark"] .shared-marks-shell .report-delete-action { color:#ffb0ba; }
+@media(max-width:600px) {
+  .student-history-controls > button,.saved-report-deletion .shared-form-actions > button { width:100%; }
+  .history-pagination { justify-content:space-between; gap:10px; }
+}

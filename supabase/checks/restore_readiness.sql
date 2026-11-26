@@ -47,6 +47,16 @@ begin
       if to_regprocedure(name) is null then raise exception 'Missing application RPC: %',name;end if;
     end loop;
   end if;
+  -- Pre-015 archives remain restorable without the new version counter/RPCs.
+  if exists(select 1 from information_schema.columns where table_schema='public' and table_name='exam_groups' and column_name='report_version') then
+    foreach name in array array[
+      'public.app_delete_saved_report(uuid,integer,timestamptz,boolean,uuid)',
+      'public.app_student_marks_history(uuid,boolean,integer,integer)',
+      'public.app_student_mark_changes(uuid,uuid,integer,integer)'
+    ] loop
+      if to_regprocedure(name) is null then raise exception 'Missing application RPC: %',name;end if;
+    end loop;
+  end if;
   if exists(select 1 from public.profiles p left join auth.users u on u.id=p.id where u.id is null) then
     raise exception 'A profile is missing its Auth user';
   end if;
