@@ -2,6 +2,8 @@
 
 A shared React website for student records, paper marking, online marks imports and ranked PDF/Excel reports. Supabase handles email/password accounts and PostgreSQL permissions. Cloudflare Workers serves the website and the private account-invitation endpoint.
 
+New to the website or taking over maintenance? Start with the [website handover guide](docs/WEBSITE_HANDOVER.md) for the screens, marking workflow, code map and setup.
+
 ## Current features
 
 - Exam-year groups, archive/restore, shared schools, student entry/editing, deactivation and bulk Excel/CSV import.
