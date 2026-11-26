@@ -83,7 +83,9 @@ function AccountGate({ children, onPassword, onReset, notice }) {
   async function handleLogout() {
     const pending = userId ? loadSharedDrafts(userId) : { drafts: {} };
     if ((pending.error || Object.keys(pending.drafts).length) && !window.confirm(
-      "Some marks have unsynced local drafts. They stay on this device for this account. Sign out anyway?",
+      pending.memoryOnly
+        ? "Some unsynced marks are held only in this tab and will be lost if you close or reload it. Sign out anyway?"
+        : "Some marks have unsynced local drafts. They stay on this device for this account. Sign out anyway?",
     )) return;
     setError("");
     setBusy(true);

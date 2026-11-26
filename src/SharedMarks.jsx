@@ -12,7 +12,7 @@ import { featureRequest } from "./featureApi.js";
 import { downloadMarker } from "./workbooks.js";
 import MarkerDownloads from "./MarkerDownloads.jsx";
 import { parseMark, formatMark } from "./domain.js";
-import { loadMarksIndex, marksRequest, loadSharedDrafts, persistSharedDrafts, participantStatus, completionOf } from "./sharedMarksApi.js";
+import { loadMarksIndex, marksRequest, loadSharedDrafts, updateSharedDraft, participantStatus, completionOf } from "./sharedMarksApi.js";
 
 const uuid = () => crypto.randomUUID();
 const draftId = (testId, enrolmentId) => `${testId}:${enrolmentId}`;
@@ -31,7 +31,7 @@ export default function SharedMarks({ profile }) {
   const [showCreate, setShowCreate] = useState(false), [refreshToken, setRefreshToken] = useState(0);
   const [initialDrafts] = useState(() => loadSharedDrafts(profile.id));
   const [drafts, setDrafts] = useState(initialDrafts.drafts), draftsRef = useRef(drafts);
-  const [draftError, setDraftError] = useState(initialDrafts.error);
+  const [draftError, setDraftError] = useState(initialDrafts.error || initialDrafts.warning);
   const admin = profile.role === "admin";
   const refreshIndex = useCallback(() => setRefreshToken(n => n + 1), []);
   useEffect(() => {
@@ -56,19 +56,12 @@ export default function SharedMarks({ profile }) {
   useEffect(() => {
     if (!tests.some(t => t.id === testId)) setTestId(tests[0]?.id || "");
   }, [groupId, index.tests]);
-  // Preserve unrelated drafts created in another tab; refuse to replace that
-  // tab's newer draft of the same score before it reaches the server.
   function changeDraft(id, next, expectedId) {
     if (initialDrafts.error) throw new Error(initialDrafts.error);
-    const stored = loadSharedDrafts(profile.id);
-    if (stored.error) throw new Error(stored.error);
-    if (stored.drafts[id] && stored.drafts[id].requestId !== expectedId)
-      throw new Error("A draft for this score changed in another tab. Reload and review it before editing here.");
-    const merged = { ...stored.drafts };
-    if (next) merged[id] = next; else delete merged[id];
-    try { persistSharedDrafts(profile.id, merged); setDraftError(""); }
-    catch { setDraftError("Browser saving is unavailable. Keep this page open until your scores are saved to the server."); }
-    draftsRef.current = merged; setDrafts(merged);
+    const updated = updateSharedDraft(profile.id, id, next, expectedId);
+    draftsRef.current = updated.drafts;
+    setDrafts(updated.drafts);
+    setDraftError(updated.warning);
   }
   const pending = Object.keys(drafts).length;
   useEffect(() => {
@@ -94,7 +87,7 @@ export default function SharedMarks({ profile }) {
           {loading ? <p className="shared-empty">Loading shared tests…</p> : !tests.length ? <section className="panel shared-empty"><h2>No shared tests in this group yet</h2><p>{admin ? "Create a test and select its participating markers to start." : "An admin must create a test and select its markers."}</p><p>Earlier practice tests stay in this browser and are not imported into real records.</p></section> : <>
             {page === "home" && <div className="test-grid">{tests.map(t => <button className="test-card panel" key={t.id} onClick={() => { setTestId(t.id); setPage("marks"); }}><div className="test-card-top"><span className="badge">{t.status}</span></div><p>{t.phase}</p><h2>Paper {t.paper}</h2><span>{formatMark(t.max_cents)} maximum marks · {t.test_date}</span><div className="test-card-foot">Open workspace →</div></button>)}</div>}
             <div hidden={page === "home"}><label className="shared-test-select">Selected test<select aria-label="Selected test" value={testId} onChange={e => setTestId(e.target.value)}>{tests.map(t => <option key={t.id} value={t.id}>{t.phase} · Paper {t.paper} · {t.status}</option>)}</select></label></div>
-            {testId && <div hidden={page === "home"}><TestWorkspace key={testId} testId={testId} profile={profile} profiles={index.profiles} view={page} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/></div>}
+            {page === "marks" && tests.some(test => test.id === testId) && <TestWorkspace key={testId} testId={testId} profile={profile} profiles={index.profiles} drafts={drafts} draftsRef={draftsRef} changeDraft={changeDraft} blocked={!!initialDrafts.error} onChanged={refreshIndex} onRemoved={() => { setTestId(""); refreshIndex(); }}/>}
           </>}
         </>}
         {page === "home" && admin && group && <TrialDataCleanup key={group.id} group={group} profileId={profile.id} tests={tests} onCleared={() => { setTestId(""); setShowCreate(false); refreshIndex(); }}/>}
@@ -127,7 +120,7 @@ function CreateTest({ group, profiles, profile, onClose, onCreated }) {
   </form>;
 }
 
-function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, changeDraft, blocked, onChanged, onRemoved }) {
+function TestWorkspace({ testId, profile, profiles, drafts, draftsRef, changeDraft, blocked, onChanged, onRemoved }) {
   const [snapshot, setSnapshot] = useState(null), snapshotRef = useRef(null);
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [mode, setMode] = useState("form");
@@ -137,22 +130,35 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
   const emptyRequests = useRef({});
   const [draftErrors, setDraftErrors] = useState({});
   const attempts = useRef({}), savingPromise = useRef(null), mounted = useRef(true), readSequence = useRef(0);
+  const activeReads = useRef(new Set());
   const admin = profile.role === "admin";
   const refresh = useCallback(async () => {
+    if (!mounted.current) return null;
     const seq = ++readSequence.current, controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    activeReads.current.add(controller);
     try {
       const next = await marksRequest(supabase, "app_get_test_workspace", { p_test_id: testId }, controller.signal);
       if (mounted.current && seq === readSequence.current) { snapshotRef.current = next; setSnapshot(next); setError(""); }
       return next;
     } catch (e) { if (mounted.current && seq === readSequence.current) setError(e.message); return null; }
-    finally { clearTimeout(timer); }
+    finally {
+      clearTimeout(timer);
+      activeReads.current.delete(controller);
+    }
   }, [testId]);
   useEffect(() => {
     mounted.current = true; refresh();
     const again = () => { if (document.visibilityState === "visible") refresh(); };
     const timer = setInterval(again, 15000);
     window.addEventListener("focus", again); window.addEventListener("online", again);
-    return () => { mounted.current = false; ++readSequence.current; clearInterval(timer); window.removeEventListener("focus", again); window.removeEventListener("online", again); };
+    return () => {
+      mounted.current = false;
+      ++readSequence.current;
+      for (const controller of activeReads.current) controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", again);
+      window.removeEventListener("online", again);
+    };
   }, [refresh]);
   const currentDrafts = Object.entries(drafts).filter(([, d]) => d.testId === testId);
   async function flush(force = false) {
@@ -164,7 +170,7 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
         const todo = Object.entries(draftsRef.current).filter(([, d]) => d.testId === testId);
         for (const [id, draft] of todo) {
           const current = snapshotRef.current;
-          if (!current || current.test.status !== "Open" || current.group.is_archived) break;
+          if (!mounted.current || !current || current.test.status !== "Open" || current.group.is_archived) break;
           if (parseMark(draft.text, current.test.max_cents / 100).error) continue;
           if (!force && attempts.current[id] === draft.requestId) continue;
           attempts.current[id] = draft.requestId;
@@ -187,7 +193,7 @@ function TestWorkspace({ testId, profile, profiles, view, drafts, draftsRef, cha
       !currentDrafts.some(([id, d]) => attempts.current[id] !== d.requestId &&
         !parseMark(d.text, snapshot.test.max_cents / 100).error)) return;
     const timer = setTimeout(() => flush(), 650); return () => clearTimeout(timer);
-  }, [drafts, saving, !!snapshot]);
+  }, [drafts, saving, snapshot?.test.status, snapshot?.test.max_cents, snapshot?.group.is_archived]);
 
   if (!snapshot) return <section className="panel shared-empty">{error ? <><p role="alert">{error}</p><button className="secondary-button" onClick={refresh}>Retry loading test</button></> : "Loading test workspace…"}</section>;
   const { test, group, participants, students } = snapshot;
