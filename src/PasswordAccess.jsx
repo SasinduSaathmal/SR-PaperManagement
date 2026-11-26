@@ -51,7 +51,9 @@ export default function PasswordAccess({ children }) {
   }
   async function logout() {
     const pending = userId ? loadSharedDrafts(userId) : { drafts: {} };
-    if ((pending.error || Object.keys(pending.drafts).length) && !window.confirm("Some marks have unsynced local drafts. They stay on this device for this account. Sign out anyway?")) return;
+    if ((pending.error || Object.keys(pending.drafts).length) && !window.confirm(pending.memoryOnly
+        ? "Some unsynced marks are held only in this tab and will be lost if you close or reload it. Sign out anyway?"
+        : "Some marks have unsynced local drafts. They stay on this device for this account. Sign out anyway?")) return;
     setBusy(true); setError("");
     try { const { error } = await supabase.auth.signOut({ scope: "local" }); if (error) throw error; }
     catch (failure) { setError(failure.message); } finally { setBusy(false); }
